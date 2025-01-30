@@ -1,48 +1,66 @@
-﻿using System;
-using System.Collections.Generic;
-using ModestTree;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace GameBoard
 {
     public class CursorPlane : MonoBehaviour
     {
-        public Plane Plane {get; private set;}
+        private const KeyCode UpButton = KeyCode.UpArrow; 
+        private const KeyCode DownButton = KeyCode.DownArrow;
+        
+        public Plane Plane { get; private set; }
 
-        public int currentLayer;
         public int layersCount;
+        public int currentLayer;
         
         public void Initialize(CellGrid cellGrid)
         {
             layersCount = cellGrid.gridSize.y;
             currentLayer = layersCount / 2;
-            Plane = new Plane(Vector3.up, new Vector3(0, currentLayer, 0));
+            
+            gameObject.transform.position = GetActualPosition();
+            Plane = new Plane(Vector3.up, GetActualPosition());
+            
             Refresh();
         }
-        
-        public void Up()
+
+        private void Update()
+        {
+            if (Input.GetKeyDown(UpButton))
+                Up();
+            else if (Input.GetKeyDown(DownButton))
+                Down();
+        }
+
+        private void Up()
         {
             if (currentLayer >= layersCount - 1)
                 return;
-            
+
             currentLayer++;
             Refresh();
         }
 
-        public void Down()
+        private void Down()
         {
             if (currentLayer <= 0)
                 return;
-            
+
             currentLayer--;
             Refresh();
         }
 
         private void Refresh()
         {
+            gameObject.transform.position = GetActualPosition();
+            
             var newPlane = Plane;
-            newPlane.SetNormalAndPosition(Vector3.up, new Vector3(0, currentLayer, 0));
+            newPlane.SetNormalAndPosition(Vector3.up, GetActualPosition());
             Plane = newPlane;
+        }
+
+        private Vector3 GetActualPosition()
+        {
+            return new Vector3(0, currentLayer, 0);
         }
     }
 }

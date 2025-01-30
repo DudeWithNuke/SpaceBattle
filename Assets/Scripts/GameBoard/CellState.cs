@@ -6,6 +6,6 @@
         ActiveLayer,
         Hovered, 
         Selected,
-        HoveredSelectedTarget
+        HoveredSelected
     }
 }

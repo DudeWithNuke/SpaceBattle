@@ -16,8 +16,6 @@ namespace Selector
         private readonly PlaceableObject.PlaceableObject _placeableObject;
         private readonly Camera _camera;
         
-        private bool _isOverlappingCell;
-
         public ObjectMoving(List<Cell> cells, CursorPlane cursorPlane, PlaceableObject.PlaceableObject placeableObject)
         {
             _camera = Camera.main;
@@ -36,8 +34,6 @@ namespace Selector
             if (!_cursorPlane.Plane.Raycast(ray, out var distance))
                 return;
 
-            _isOverlappingCell = !_placeableObject.GetOverlappingCells(_cellColliders).IsEmpty();
-            
             var targetPosition = CalculateCursorTargetPosition(ray.GetPoint(distance));
             MoveCursor(targetPosition);
         }
@@ -65,7 +61,7 @@ namespace Selector
 
         private float CalculatePlanarComponent(float value, float offset)
         {
-            return _isOverlappingCell
+            return _placeableObject.IsOverlappingCell
                 ? Mathf.RoundToInt(value) + offset
                 : value;
         }
@@ -75,7 +71,7 @@ namespace Selector
             if (_placeableObject.transform.position == targetPosition)
                 return;
 
-            _placeableObject.transform.position = _isOverlappingCell
+            _placeableObject.transform.position = _placeableObject.IsOverlappingCell
                 ? Vector3.MoveTowards(_placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime)
                 : targetPosition;
         }

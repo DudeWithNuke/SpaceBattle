@@ -1,4 +1,5 @@
 ﻿using System;
+using ModestTree;
 using UnityEngine;
 
 namespace GameBoard
@@ -10,7 +11,8 @@ namespace GameBoard
         public Collider CellCollider {private set; get;}
 
         public Vector3Int Position { get; private set; }
-        public CellState State { get; private set; }
+        public CellState CurrentState { get; private set; }
+        
         public CellState _previousState;
 
         public void Initialize(Vector3Int position)
@@ -34,27 +36,36 @@ namespace GameBoard
 
         public void UpdateState(CellState newState)
         {
-            State = newState;
-            _cellRenderer.material.color = State switch
+            CurrentState = newState;
+            _cellRenderer.material.color = CurrentState switch
             {
                 CellState.DisabledLayer => Color.black,
                 CellState.ActiveLayer => Color.white,
                 CellState.Hovered => Color.yellow,
-                CellState.HoveredSelectedTarget => Color.cyan,
+                CellState.HoveredSelected => Color.cyan,
                 _ => _cellRenderer.material.color
             };
         }
 
         private void OnTriggerStay(Collider other)
         {
-            _previousState = State;
-            //todo проверять is moving
-            UpdateState(CellState.Hovered);
+            if (other.GetComponent<PlaceableObject.PlaceableObject>().IsMoving)
+                return;
+
+            if (CurrentState is CellState.DisabledLayer or CellState.ActiveLayer)
+            {
+                _previousState = CurrentState;
+                UpdateState(CellState.Hovered);
+            }
+
+            if (CurrentState == CellState.Selected)
+                UpdateState(CellState.HoveredSelected);
         }
         
         private void OnTriggerExit(Collider other)
         {
-            UpdateState(_previousState);
+            if (CurrentState is CellState.Hovered or CellState.HoveredSelected)
+                UpdateState(_previousState);
         }
     }
 }

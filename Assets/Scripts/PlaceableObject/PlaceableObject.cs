@@ -8,6 +8,10 @@ namespace PlaceableObject
 {
     public class PlaceableObject : MonoBehaviour
     {
+        public event Action<PlaceableObjectState> OnStateChanged;
+        
+        public PlaceableObjectState _state;
+        
         public BoxCollider[] BoxColliders { get; private set; }
 
         private Vector3 _previousPosition;
@@ -19,12 +23,23 @@ namespace PlaceableObject
         private void OnValidate()
         {
             BoxColliders = gameObject.GetComponentsInChildren<BoxCollider>();
+            _state = PlaceableObjectState.Picked;
         }
 
         private void Update()
         {
             IsMoving = !(Vector3.Distance(_previousPosition, transform.position) < MinimalSpeed);
             _previousPosition = transform.position;
+
+            if (!Input.GetMouseButtonDown(0) && !IsOverlappingCell)
+                return;
+
+            print("Mouse Button is Down");
+            
+            if (_state == PlaceableObjectState.Picked)
+                _state = PlaceableObjectState.Placed;
+                
+            OnStateChanged?.Invoke(_state);
         }
 
         private void OnTriggerStay(Collider other)

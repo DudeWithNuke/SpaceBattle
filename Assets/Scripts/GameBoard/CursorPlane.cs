@@ -1,8 +1,8 @@
-﻿using UnityEngine;
-
+﻿using ModestTree;
+using UnityEngine;
 namespace GameBoard
 {
-    public class CursorPlane : MonoBehaviour
+    public class CursorPlane : InitializeMonoBehaviour<CursorPlane>
     {
         private const KeyCode UpButton = KeyCode.UpArrow; 
         private const KeyCode DownButton = KeyCode.DownArrow;
@@ -11,18 +11,25 @@ namespace GameBoard
 
         public int layersCount;
         public int currentLayer;
-        
-        public void Initialize(CellGrid cellGrid)
+
+        private void Awake()
+        {
+            Subscribe<CellGrid>(OnCellGridInitialized);
+        }
+
+        private void OnCellGridInitialized(CellGrid cellGrid)
         {
             layersCount = cellGrid.gridSize.y;
             currentLayer = layersCount / 2;
-            
+        }
+        
+        protected override void SetUp()
+        {
             gameObject.transform.position = GetActualPosition();
             Plane = new Plane(Vector3.up, GetActualPosition());
-            
             Refresh();
         }
-
+        
         private void Update()
         {
             if (Input.GetKeyDown(UpButton))

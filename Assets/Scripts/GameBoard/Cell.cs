@@ -1,22 +1,31 @@
-﻿using UnityEngine;
+﻿using PlaceableObject;
+using UnityEngine;
 
 namespace GameBoard
 {
     public class Cell : MonoBehaviour
     {
-        private const int LeftMouseButton = 0; 
-        private const int RightMouseButton = 1;
-        
         private GameObject _cellPrefab;
         private Renderer _cellRenderer;
 
         private Vector3Int _position;
-        private CellState _currentState;
-
+        private CellState _state;
         private CellState _previousState;
 
-        public void Initialize(Vector3Int position)
+        private void OnStateChanged(PlaceableObjectState placeableObjectState)
         {
+            _state = placeableObjectState switch
+            {
+                PlaceableObjectState.Placed when _state == CellState.Hovered => CellState.Selected,
+                PlaceableObjectState.Picked when _state == CellState.Selected => _previousState,
+                _ => _state
+            };
+        }
+
+        public void Initialize(Vector3Int position)//, PlaceableObject.PlaceableObject placeableObject)
+        {
+            //placeableObject.OnStateChanged += OnStateChanged;
+
             _cellPrefab = gameObject;
             _cellRenderer = GetComponent<Renderer>();
 
@@ -33,17 +42,6 @@ namespace GameBoard
             DestroyImmediate(_cellPrefab);
         }
 
-        private void Update()
-        {
-            if (!Input.GetMouseButtonDown(LeftMouseButton)) return;
-            
-            if(_currentState == CellState.Hovered)
-                UpdateState(CellState.Selected);
-
-            if (_currentState == CellState.HoveredSelected)
-                UpdateState(_previousState);
-        }
-        
         private void OnTriggerEnter(Collider other)
         {
             CursorPlaneCollideEnter(other);
@@ -59,33 +57,18 @@ namespace GameBoard
             CursorPlaneCollideExit(other);
             PlaceableObjectExit(other);
         }
-
-        private void UpdateState(CellState newState)
-        {
-            _currentState = newState;
-            _cellRenderer.material.color = _currentState switch
-            {
-                CellState.DisabledLayer => Color.black,
-                CellState.ActiveLayer => Color.white,
-                CellState.Hovered => Color.yellow,
-                CellState.Selected => Color.green,
-                CellState.HoveredSelected => Color.cyan,
-                _ => _cellRenderer.material.color
-            };
-        }
         
-        // todo четко структурировать логику смены состояний
         // todo решить проблему множественного селекта/деселекта при пересечениях
-        
+
         private void CursorPlaneCollideEnter(Collider other)
         {
-            if (other.GetComponent<CursorPlane>() && _currentState != CellState.Selected)
+            if (other.GetComponent<CursorPlane>() && _state != CellState.Selected)
                 UpdateState(CellState.ActiveLayer);
         }
 
         private void CursorPlaneCollideExit(Collider other)
         {
-            if (other.GetComponent<CursorPlane>() && _currentState != CellState.Selected)
+            if (other.GetComponent<CursorPlane>() && _state != CellState.Selected)
                 UpdateState(CellState.DisabledLayer);
         }
 
@@ -99,13 +82,13 @@ namespace GameBoard
             if (placeableObject.IsMoving)
                 return;
 
-            if (_currentState is CellState.DisabledLayer or CellState.ActiveLayer)
+            if (_state is CellState.DisabledLayer or CellState.ActiveLayer)
             {
-                _previousState = _currentState;
+                _previousState = _state;
                 UpdateState(CellState.Hovered);
             }
 
-            if (_currentState == CellState.Selected)
+            if (_state == CellState.Selected)
                 UpdateState(CellState.HoveredSelected);
         }
 
@@ -114,11 +97,25 @@ namespace GameBoard
             if (!other.GetComponent<PlaceableObject.PlaceableObject>())
                 return;
 
-            if (_currentState is CellState.Hovered)
+            if (_state is CellState.Hovered)
                 UpdateState(_previousState);
-            
-            if(_currentState is CellState.HoveredSelected)
+
+            if (_state is CellState.HoveredSelected)
                 UpdateState(CellState.Selected);
+        }
+        
+        private void UpdateState(CellState newState)
+        {
+            _state = newState;
+            _cellRenderer.material.color = _state switch
+            {
+                CellState.DisabledLayer => Color.black,
+                CellState.ActiveLayer => Color.white,
+                CellState.Hovered => Color.yellow,
+                CellState.Selected => Color.green,
+                CellState.HoveredSelected => Color.cyan,
+                _ => _cellRenderer.material.color
+            };
         }
     }
 }

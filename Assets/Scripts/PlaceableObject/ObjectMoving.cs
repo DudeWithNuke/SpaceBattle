@@ -22,10 +22,13 @@ namespace PlaceableObject
 
         private void Update()
         {
+            if (placeableObject._state == PlaceableObjectState.Placed)
+                return;
+            
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (!_cursorPlane.Plane.Raycast(ray, out var distance))
                 return;
-
+            
             var targetPosition = CalculateCursorTargetPosition(ray.GetPoint(distance));
             MoveCursor(targetPosition);
         }

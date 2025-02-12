@@ -1,16 +1,18 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace GameBoard
 {
-    public class CellGrid : MonoBehaviour
+    public class CellGrid : InitializeMonoBehaviour<CellGrid>
     {
+        //[SerializeField] private PlaceableObject.PlaceableObject placeableObject;
         [SerializeField] private Cell prefab;
         [SerializeField] public Vector3Int gridSize;
         public List<Cell> outputCells;
-
-        public void Initialize()
+        
+        protected override void SetUp()
         {
             gridSize = new Vector3Int(
                 (int)Mathf.Clamp(gridSize.x, 0, Mathf.Infinity),
@@ -32,7 +34,7 @@ namespace GameBoard
             {
                 var position = new Vector3Int(x, y, z) + transform.position;
                 var cell = Instantiate(prefab, position, Quaternion.identity, transform);
-                cell.Initialize(new Vector3Int(x, y, z));
+                cell.Initialize(new Vector3Int(x, y, z));//, placeableObject);
                 outputCells.Add(cell);
             }
         }

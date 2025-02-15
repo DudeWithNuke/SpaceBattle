@@ -2,10 +2,12 @@
 using UnityEngine;
 namespace GameBoard
 {
-    public class CursorPlane : InitializeMonoBehaviour<CursorPlane>
+    public class CursorPlane : CustomMonoBehaviour<CursorPlane>
     {
         private const KeyCode UpButton = KeyCode.UpArrow; 
         private const KeyCode DownButton = KeyCode.DownArrow;
+
+        [SerializeField] private CellGrid CellGrid;
         
         public Plane Plane { get; private set; }
 

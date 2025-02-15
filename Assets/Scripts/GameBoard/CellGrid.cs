@@ -5,7 +5,7 @@ using UnityEngine.Serialization;
 
 namespace GameBoard
 {
-    public class CellGrid : InitializeMonoBehaviour<CellGrid>
+    public class CellGrid : CustomMonoBehaviour<CellGrid>
     {
         //[SerializeField] private PlaceableObject.PlaceableObject placeableObject;
         [SerializeField] private Cell prefab;

@@ -1,5 +1,4 @@
-﻿using ModestTree;
-using UnityEngine;
+﻿using UnityEngine;
 namespace GameBoard
 {
     public class CursorPlane : CustomMonoBehaviour<CursorPlane>
@@ -7,8 +6,6 @@ namespace GameBoard
         private const KeyCode UpButton = KeyCode.UpArrow; 
         private const KeyCode DownButton = KeyCode.DownArrow;
 
-        [SerializeField] private CellGrid CellGrid;
-        
         public Plane Plane { get; private set; }
 
         public int layersCount;

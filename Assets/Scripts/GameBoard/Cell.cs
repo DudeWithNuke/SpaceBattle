@@ -22,10 +22,8 @@ namespace GameBoard
             };
         }
 
-        public void Initialize(Vector3Int position)//, PlaceableObject.PlaceableObject placeableObject)
+        public void Initialize(Vector3Int position)
         {
-            //placeableObject.OnStateChanged += OnStateChanged;
-
             _cellPrefab = gameObject;
             _cellRenderer = GetComponent<Renderer>();
 
@@ -79,9 +77,6 @@ namespace GameBoard
             if (!placeableObject)
                 return;
 
-            if (placeableObject.IsMoving)
-                return;
-
             if (_state is CellState.DisabledLayer or CellState.ActiveLayer)
             {
                 _previousState = _state;
@@ -99,7 +94,7 @@ namespace GameBoard
 
             if (_state is CellState.Hovered)
                 UpdateState(_previousState);
-
+            
             if (_state is CellState.HoveredSelected)
                 UpdateState(CellState.Selected);
         }

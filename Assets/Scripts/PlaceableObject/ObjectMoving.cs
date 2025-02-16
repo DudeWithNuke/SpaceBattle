@@ -1,36 +1,58 @@
 ﻿using GameBoard;
+using ModestTree;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Utils;
 
 namespace PlaceableObject
 {
-    public class ObjectMoving : MonoBehaviour
+    public class ObjectMoving : CustomMonoBehaviour<ObjectMoving>
     {
-        //todo структурировать в инспекторе
+        private Camera _camera;
+        private CursorPlane _cursorPlane;
+        private PlaceableObject _placeableObject;
         
         private const float MoveSpeed = 30f;
+        private const float MinimalSpeed = 0.01f;
+        public bool IsMoving { get; private set; }
+        private Vector3 _previousPosition;
+        
+        private void Awake()
+        {
+            Subscribe<CursorPlane>(cursorPlane => _cursorPlane = cursorPlane);
+            Subscribe<ObjectSelection>(objectSelection => objectSelection.OnObjectPicked += OnPlaceableObjectPicked);
+        }
 
-        [SerializeField] private PlaceableObject placeableObject;
-        private CursorPlane _cursorPlane;
-        private Camera _camera;
+        private void OnPlaceableObjectPicked(PlaceableObject newPlaceableObject)
+        {
+            _placeableObject = newPlaceableObject;
+            Log.Info($"Object {_placeableObject.name} picked");
+        }
 
-        public void Initialize(CursorPlane cursorPlane)
+        protected override void SetUp()
         {
             _camera = Camera.main;
-            _cursorPlane = cursorPlane;
         }
 
         private void Update()
         {
-            if (placeableObject._state == PlaceableObjectState.Placed)
+            if(!_placeableObject)
                 return;
+            
+            if (_placeableObject.State != PlaceableObjectState.Picked)
+            {
+                IsMoving = false;
+                return;
+            }
+            IsMoving = true;
             
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (!_cursorPlane.Plane.Raycast(ray, out var distance))
                 return;
             
             var targetPosition = CalculateCursorTargetPosition(ray.GetPoint(distance));
-            MoveCursor(targetPosition);
+            Move(targetPosition);
+            CheckMoving();
         }
 
         private Vector3 CalculateCursorTargetPosition(Vector3 mousePositionOnPlane)
@@ -38,8 +60,9 @@ namespace PlaceableObject
             var xOffset = 0f;
             var yOffset = 0f;
             var zOffset = 0f;
-
-            foreach (var objectCollider in placeableObject.BoxColliders)
+            
+            Log.Info((_placeableObject.BoxColliders == null).ToString());
+            foreach (var objectCollider in _placeableObject.BoxColliders)
             {
                 if (MathUtils.IsGreaterThanOdd(objectCollider.size.x))
                     xOffset = 0.5f;
@@ -56,19 +79,22 @@ namespace PlaceableObject
 
         private float CalculatePlanarComponent(float value, float offset)
         {
-            return placeableObject.IsOverlappingCell
+            return _placeableObject.IsOverlappingCell
                 ? Mathf.RoundToInt(value) + offset
                 : value;
         }
 
-        private void MoveCursor(Vector3 targetPosition)
+        private void Move(Vector3 targetPosition)
         {
-            if (placeableObject.transform.position == targetPosition)
-                return;
-
-            placeableObject.transform.position = placeableObject.IsOverlappingCell
-                ? Vector3.MoveTowards(placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime)
+            _placeableObject.transform.position = _placeableObject.IsOverlappingCell
+                ? Vector3.MoveTowards(_placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime)
                 : targetPosition;
+        }
+        
+        private void CheckMoving()
+        {
+            IsMoving = !(Vector3.Distance(_previousPosition, _placeableObject.transform.position) < MinimalSpeed);
+            _previousPosition = _placeableObject.transform.position;
         }
     }
 }

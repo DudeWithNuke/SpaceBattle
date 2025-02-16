@@ -2,7 +2,6 @@
 {
     public enum PlaceableObjectState
     {
-        Stored,
         Picked,
         Placed
     }

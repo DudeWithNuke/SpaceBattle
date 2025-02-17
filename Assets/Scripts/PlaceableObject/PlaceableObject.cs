@@ -1,11 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using GameBoard;
+using ModestTree;
 using UnityEngine;
 
 namespace PlaceableObject
 {
     public class PlaceableObject : MonoBehaviour
     {
+        public event Action<PlaceableObject> OnStateChange;
+        
         public PlaceableObjectState State { get; private set; }
         [SerializeField] public BoxCollider[] BoxColliders;
         public bool IsOverlappingCell { get; private set; }
@@ -26,6 +30,41 @@ namespace PlaceableObject
         { 
             if (other.GetComponent<Cell>()) 
                 IsOverlappingCell = false;
+        }
+
+        private void OnMouseUp()
+        {
+            if(!IsOverlappingCell)
+                return;
+
+            switch (State)
+            {
+                case PlaceableObjectState.Picked:
+                    Place();
+                    break;
+                case PlaceableObjectState.Placed:
+                    Pick();
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private void Update()
+        {
+            Log.Info(IsOverlappingCell.ToString());
+        }
+
+        private void Place()
+        {
+            State = PlaceableObjectState.Placed;
+            OnStateChange?.Invoke(this);
+        }
+        
+        private void Pick()
+        {
+            State = PlaceableObjectState.Picked;
+            OnStateChange?.Invoke(this);
         }
 
         public HashSet<Cell> GetOverlappingCells(Collider[] cellColliders)

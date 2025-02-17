@@ -1,20 +1,28 @@
-﻿using GameBoard;
+﻿using System;
+using GameBoard;
 using PlaceableObject;
 using UnityEngine;
 
 public class Bootstrap : MonoBehaviour
 {
-    [SerializeField] private CellGrid cellGrid;
-    [SerializeField] private CursorPlane cursorPlane;
-    [SerializeField] private ObjectSelection objectSelection;
-    [SerializeField] private ObjectMoving objectMoving;
+    private CellGrid _cellGrid;
+    private CursorPlane _cursorPlane;
+    private ObjectSelection _objectSelection;
+    private ObjectMoving _objectMoving;
     
     private void Start()
     {
-        cellGrid.Initialize();
-        cursorPlane.Initialize();
-        
-        objectSelection.Initialize();
-        objectMoving.Initialize();
+        _cellGrid.Initialize();
+        _cursorPlane.Initialize();
+        _objectSelection.Initialize();
+        _objectMoving.Initialize();
+    }
+
+    private void OnValidate()
+    {
+        _cellGrid = GetComponentInChildren<CellGrid>();
+        _cursorPlane = GetComponentInChildren<CursorPlane>();
+        _objectSelection = GetComponentInChildren<ObjectSelection>();
+        _objectMoving = GetComponentInChildren<ObjectMoving>();
     }
 }

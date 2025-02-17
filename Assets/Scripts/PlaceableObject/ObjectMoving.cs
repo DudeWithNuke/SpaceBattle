@@ -1,7 +1,6 @@
 ﻿using GameBoard;
 using ModestTree;
 using UnityEngine;
-using UnityEngine.Serialization;
 using Utils;
 
 namespace PlaceableObject
@@ -61,7 +60,6 @@ namespace PlaceableObject
             var yOffset = 0f;
             var zOffset = 0f;
             
-            Log.Info((_placeableObject.BoxColliders == null).ToString());
             foreach (var objectCollider in _placeableObject.BoxColliders)
             {
                 if (MathUtils.IsGreaterThanOdd(objectCollider.size.x))

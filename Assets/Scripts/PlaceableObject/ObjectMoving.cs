@@ -11,7 +11,7 @@ namespace PlaceableObject
         private CursorPlane _cursorPlane;
         private PlaceableObject _placeableObject;
         
-        private const float MoveSpeed = 30f;
+        private const float MoveSpeed = 50f;
         private const float MinimalSpeed = 0.01f;
         public bool IsMoving { get; private set; }
         private Vector3 _previousPosition;
@@ -70,23 +70,14 @@ namespace PlaceableObject
                     zOffset = 0.5f;
             }
 
-            var x = CalculatePlanarComponent(mousePositionOnPlane.x, xOffset);
-            var z = CalculatePlanarComponent(mousePositionOnPlane.z, zOffset);
+            var x = Mathf.RoundToInt(mousePositionOnPlane.x) + xOffset;
+            var z = Mathf.RoundToInt(mousePositionOnPlane.z) + zOffset;
             return new Vector3(x, _cursorPlane.currentLayer + yOffset, z);
-        }
-
-        private float CalculatePlanarComponent(float value, float offset)
-        {
-            return _placeableObject.IsOverlappingCell
-                ? Mathf.RoundToInt(value) + offset
-                : value;
         }
 
         private void Move(Vector3 targetPosition)
         {
-            _placeableObject.transform.position = _placeableObject.IsOverlappingCell
-                ? Vector3.MoveTowards(_placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime)
-                : targetPosition;
+            _placeableObject.transform.position = Vector3.MoveTowards(_placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime);
         }
         
         private void CheckMoving()

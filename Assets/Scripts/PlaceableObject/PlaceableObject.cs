@@ -12,31 +12,15 @@ namespace PlaceableObject
         
         public PlaceableObjectState State { get; private set; }
         [SerializeField] public BoxCollider[] BoxColliders;
-        public bool IsOverlappingCell { get; private set; }
-
+        
         private void Start()
         {
             //BoxColliders = GetComponents<BoxCollider>();
             State = PlaceableObjectState.Picked;
         }
         
-        private void OnTriggerStay(Collider other)
-        {
-            if (other.GetComponent<Cell>()) 
-                IsOverlappingCell = true;
-        }
-        
-        private void OnTriggerExit(Collider other)
-        { 
-            if (other.GetComponent<Cell>()) 
-                IsOverlappingCell = false;
-        }
-
         private void OnMouseUp()
         {
-            if(!IsOverlappingCell)
-                return;
-
             switch (State)
             {
                 case PlaceableObjectState.Picked:
@@ -49,12 +33,7 @@ namespace PlaceableObject
                     throw new ArgumentOutOfRangeException();
             }
         }
-
-        private void Update()
-        {
-            Log.Info(IsOverlappingCell.ToString());
-        }
-
+        
         private void Place()
         {
             State = PlaceableObjectState.Placed;

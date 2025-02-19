@@ -13,7 +13,7 @@ namespace GameBoard
 
         private void Awake()
         {
-            Subscribe<CellGrid>(OnCellGridInitialized);
+            SubscribeOnInitialize<CellGrid>(OnCellGridInitialized);
         }
 
         private void OnCellGridInitialized(CellGrid cellGrid)

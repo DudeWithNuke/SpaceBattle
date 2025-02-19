@@ -37,7 +37,7 @@ namespace GameBoard
 
         public void DestroyPrefab()
         {
-            DestroyImmediate(_cellPrefab);
+            Destroy(_cellPrefab);
         }
 
         private void OnTriggerEnter(Collider other)

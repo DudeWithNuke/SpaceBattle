@@ -1,75 +1,55 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using ModestTree;
+using UI;
 using UnityEngine;
 using UnityEngine.UI;
-using Object = UnityEngine.Object;
+using Object = System.Object;
 
 namespace PlaceableObject
 {
     public class ObjectSelection : CustomMonoBehaviour<ObjectSelection>
     {
         public event Action<PlaceableObject> OnObjectPicked;
-        
+
         [SerializeField] public List<PlaceableObject> placeableObjects;
-        [SerializeField] public PlaceableObject currentObject;
-        
+
         [SerializeField] public Transform buttonPanel;
-        [SerializeField] public GameObject buttonPrefab;
-        [SerializeField] public Transform spawnPoint;
-        
+        [SerializeField] public ShipButton buttonPrefab;
+
+        private Dictionary<PlaceableObject, ShipButton> _shipButtons;
+
         protected override void SetUp()
         {
-            if (!StartCheck())
-                return;
+            CreateButtons();
+            ShipButton.OnObjectSpawned += HandleObjectSpawned;
+        }
+        
+        private void HandleObjectSpawned(PlaceableObject placeableObject)
+        {
             
+            
+            OnObjectPicked?.Invoke(placeableObject);
+        }
+
+        private void DisableOtherButtons(PlaceableObject excludedPlaceableObject)
+        {
+            var buttons = _shipButtons
+                .Where(kvp => kvp.Key != excludedPlaceableObject)
+                .Select(kvp => kvp.Value)
+                .ToList();
+
+            foreach (var button in buttons)
+                button.DisableInteraction();
+        }
+
+        private void CreateButtons()
+        {
             foreach (var placeableObject in placeableObjects)
             {
-                var buttonObject = Instantiate(buttonPrefab, buttonPanel);
-                var button = buttonObject.GetComponent<Button>();
-
-                if (button == null)
-                {
-                    Log.Error("Could not find button prefab");
-                    continue;
-                }
-
-                button.onClick.AddListener(() => SpawnPrefab(placeableObject));
-                buttonObject.name = placeableObject.name;
-            }
-        }
-
-        private void SpawnPrefab(PlaceableObject placeableObject)
-        {
-            if (currentObject != null)
-                Destroy(currentObject.gameObject);
-            
-            var newObject = Instantiate(placeableObject, spawnPoint.position, spawnPoint.rotation);
-            currentObject = newObject.GetComponent<PlaceableObject>();
-
-            if (currentObject == null) 
-                Log.Error("Could not find placeable prefab");
-            
-            OnObjectPicked?.Invoke(currentObject);
-        }
-
-        private bool StartCheck()
-        {
-            var isPassed = true;
-
-            isPassed &= CheckReference(buttonPanel);
-            isPassed &= CheckReference(buttonPrefab);
-            isPassed &= CheckReference(spawnPoint);
-
-            return isPassed;
-
-            bool CheckReference(Object reference)
-            {
-                if (reference != null) 
-                    return true;
-                
-                Log.Error("Could not find reference");
-                return false;
+                var shipButton = Instantiate(buttonPrefab, buttonPanel);
+                shipButton.Initialize(placeableObject);
             }
         }
     }

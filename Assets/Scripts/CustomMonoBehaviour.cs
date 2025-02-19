@@ -31,12 +31,12 @@ public abstract class CustomMonoBehaviour<T> : MonoBehaviour where T : CustomMon
         Log.Info(gameObject.name + " was initialized");
     }
 
-    protected bool Subscribe<TSender>(TSender sender, Action<TSender> handler) where TSender : CustomMonoBehaviour<TSender>
+    protected bool SubscribeOnInitialize<TSender>(TSender sender, Action<TSender> handler) where TSender : CustomMonoBehaviour<TSender>
     {
         return SubscribeInternal(sender, handler);
     }
 
-    protected bool Subscribe<TSender>(Action<TSender> handler) where TSender : CustomMonoBehaviour<TSender>
+    protected bool SubscribeOnInitialize<TSender>(Action<TSender> handler) where TSender : CustomMonoBehaviour<TSender>
     {
         var sender = GetAdjacentComponent<TSender>();
         return SubscribeInternal(sender, handler);

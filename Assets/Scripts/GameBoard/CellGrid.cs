@@ -32,7 +32,7 @@ namespace GameBoard
             {
                 var position = new Vector3Int(x, y, z) + transform.position;
                 var cell = Instantiate(prefab, position, Quaternion.identity, transform);
-                cell.Initialize(new Vector3Int(x, y, z)); //, placeableObject);
+                cell.Initialize(new Vector3Int(x, y, z));
                 outputCells.Add(cell);
             }
         }

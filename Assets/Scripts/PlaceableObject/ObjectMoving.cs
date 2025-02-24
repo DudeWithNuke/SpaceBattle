@@ -18,7 +18,7 @@ namespace PlaceableObject
         private void Awake()
         {
             SubscribeOnInitialize<CursorPlane>(cursorPlane => _cursorPlane = cursorPlane);
-            SubscribeOnInitialize<ObjectSelection>(objectSelection => objectSelection.OnObjectPicked += placeableObject => _placeableObject = placeableObject);
+            SubscribeOnInitialize<ObjectSelection>(objectSelection => objectSelection.OnStateChanged += placeableObject => _placeableObject = placeableObject);
         }
         
         protected override void SetUp()
@@ -28,17 +28,9 @@ namespace PlaceableObject
 
         private void Update()
         {
-            if (!_placeableObject)
+            if (!_placeableObject || _placeableObject.State != PlaceableObjectState.Picked)
                 return;
-
-            if (_placeableObject.State != PlaceableObjectState.Picked)
-            {
-                IsMoving = false;
-                return;
-            }
-
-            IsMoving = true;
-
+            
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (!_cursorPlane.Plane.Raycast(ray, out var distance))
                 return;
@@ -71,8 +63,7 @@ namespace PlaceableObject
 
         private void Move(Vector3 targetPosition)
         {
-            _placeableObject.transform.position = Vector3.MoveTowards(_placeableObject.transform.position,
-                targetPosition, MoveSpeed * Time.deltaTime);
+            _placeableObject.transform.position = Vector3.MoveTowards(_placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime);
         }
 
         private void CheckMoving()

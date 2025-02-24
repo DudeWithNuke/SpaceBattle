@@ -1,11 +1,11 @@
 using System.Collections.Generic;
+using DefaultNamespace;
 using UnityEngine;
 
 namespace GameBoard
 {
-    public class CellGrid : CustomMonoBehaviour<CellGrid>
+    public class CellGrid : CustomMonoBehaviour<CellGrid>, IInteractionMode
     {
-        //[SerializeField] private PlaceableObject.PlaceableObject placeableObject;
         [SerializeField] private Cell prefab;
         [SerializeField] public Vector3Int gridSize;
         public List<Cell> outputCells;
@@ -47,6 +47,22 @@ namespace GameBoard
                 outputCells[i].DestroyPrefab();
                 outputCells.RemoveAt(i);
             }
+        }
+        
+        public void Activate()
+        {
+            foreach (var cell in outputCells)
+                cell.Activate();
+        }
+
+        public void Deactivate()
+        {
+            foreach (var cell in outputCells)
+                cell.Deactivate();
+        }
+
+        public void UpdateMode()
+        {
         }
     }
 }

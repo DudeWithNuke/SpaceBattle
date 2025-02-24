@@ -1,7 +1,8 @@
-﻿using UnityEngine;
+﻿using DefaultNamespace;
+using UnityEngine;
 namespace GameBoard
 {
-    public class CursorPlane : CustomMonoBehaviour<CursorPlane>
+    public class CursorPlane : CustomMonoBehaviour<CursorPlane>, IInteractionMode
     {
         private const KeyCode UpButton = KeyCode.UpArrow; 
         private const KeyCode DownButton = KeyCode.DownArrow;
@@ -30,6 +31,21 @@ namespace GameBoard
         }
         
         private void Update()
+        {
+            UpdateMode();
+        }
+        
+        public void Activate()
+        {
+            enabled = true;
+        }
+
+        public void Deactivate()
+        {
+            enabled = false;
+        }
+
+        public void UpdateMode()
         {
             if (Input.GetKeyDown(UpButton))
                 Up();

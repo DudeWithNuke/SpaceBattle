@@ -67,6 +67,8 @@ namespace UI
                 return;
             }
             
+            DisableInteraction();
+            
             OnObjectSpawned?.Invoke(placeableObject);
         }
         

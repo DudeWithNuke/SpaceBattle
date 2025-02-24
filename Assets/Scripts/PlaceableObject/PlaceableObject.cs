@@ -7,8 +7,9 @@ using UnityEngine;
 namespace PlaceableObject
 {
     public class PlaceableObject : MonoBehaviour
-    {
-        public event Action<PlaceableObject> OnStateChange;
+    { 
+        public event Action<PlaceableObject> OnPlaced;
+        public event Action<PlaceableObject> OnPicked;
         
         public PlaceableObjectState State { get; private set; }
         [SerializeField] public BoxCollider[] BoxColliders;
@@ -19,6 +20,10 @@ namespace PlaceableObject
             State = PlaceableObjectState.Picked;
         }
         
+        
+        // todo описать коллизии
+        // 1. Нельзя разместить вне клетки
+        // 2. Нельзя разместить внутри другого placeable object (если это два ship)
         private void OnMouseUp()
         {
             switch (State)
@@ -37,13 +42,13 @@ namespace PlaceableObject
         private void Place()
         {
             State = PlaceableObjectState.Placed;
-            OnStateChange?.Invoke(this);
+            OnPlaced?.Invoke(this);
         }
         
         private void Pick()
         {
             State = PlaceableObjectState.Picked;
-            OnStateChange?.Invoke(this);
+            OnPicked?.Invoke(this);
         }
 
         public HashSet<Cell> GetOverlappingCells(Collider[] cellColliders)

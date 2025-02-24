@@ -594,8 +594,7 @@ MonoBehaviour:
   - {fileID: 8198647583069886293, guid: cccf2b1e8eef6a24a99dedd766bf1299, type: 3}
   - {fileID: 8840395379830388559, guid: fdcb43e0fd49ded418a151d068fba2a8, type: 3}
   buttonPanel: {fileID: 563476061}
-  buttonPrefab: {fileID: 2540038591585603336, guid: d1ca22cde256c4b4dbf58af3ab04c587, type: 3}
-  spawnPoint: {fileID: 445403121}
+  buttonPrefab: {fileID: 3038051652008755593, guid: d1ca22cde256c4b4dbf58af3ab04c587, type: 3}
 --- !u!1 &510327794
 GameObject:
   m_ObjectHideFlags: 0

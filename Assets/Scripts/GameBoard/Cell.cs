@@ -1,9 +1,10 @@
-﻿using PlaceableObject;
+﻿using DefaultNamespace;
+using PlaceableObject;
 using UnityEngine;
 
 namespace GameBoard
 {
-    public class Cell : MonoBehaviour
+    public class Cell : MonoBehaviour, IInteractionMode
     {
         private GameObject _cellPrefab;
         private Renderer _cellRenderer;
@@ -111,6 +112,21 @@ namespace GameBoard
                 CellState.HoveredSelected => Color.cyan,
                 _ => _cellRenderer.material.color
             };
+        }
+
+        public void Activate()
+        {
+            enabled = true;
+        }
+
+        public void Deactivate()
+        {
+            UpdateState(CellState.DisabledLayer);
+            enabled = false;
+        }
+
+        public void UpdateMode()
+        {
         }
     }
 }

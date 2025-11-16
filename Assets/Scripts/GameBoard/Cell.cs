@@ -1,109 +1,105 @@
 ﻿using DefaultNamespace;
-using PlaceableObject;
 using UnityEngine;
 
 namespace GameBoard
 {
     public class Cell : MonoBehaviour, IInteractionMode
     {
-        private GameObject _cellPrefab;
         private Renderer _cellRenderer;
-
         private Vector3Int _position;
+
         private CellState _state;
         private CellState _previousState;
 
-        private void OnStateChanged(PlaceableObjectState placeableObjectState)
+        private void Awake()
         {
-            _state = placeableObjectState switch
-            {
-                PlaceableObjectState.Placed when _state == CellState.Hovered => CellState.Selected,
-                PlaceableObjectState.Picked when _state == CellState.Selected => _previousState,
-                _ => _state
-            };
+            _cellRenderer = GetComponent<Renderer>();
         }
 
         public void Initialize(Vector3Int position)
         {
-            _cellPrefab = gameObject;
-            _cellRenderer = GetComponent<Renderer>();
-
-            _cellPrefab.gameObject.layer = _position.y;
-            _cellPrefab.name = $"X: {_position.x}, Y: {_position.y}, Z: {_position.z}";
-
             _position = position;
 
-            UpdateState(CellState.DisabledLayer);
+            gameObject.layer = _position.y;
+            gameObject.name = $"X: {_position.x}, Y: {_position.y}, Z: {_position.z}";
+
+            SetState(CellState.DisabledLayer);
         }
 
-        public void DestroyPrefab()
+        public void DestroySelf()
         {
-            Destroy(_cellPrefab);
+            Destroy(gameObject);
         }
 
         private void OnTriggerEnter(Collider other)
         {
-            CursorPlaneCollideEnter(other);
+            if (other.TryGetComponent(out CursorPlane _))
+                OnCursorEnter();
         }
 
         private void OnTriggerStay(Collider other)
         {
-            PlaceableObjectStay(other);
+            if (other.TryGetComponent(out PlaceableObject.PlaceableObject _))
+                OnPlaceableStay();
         }
 
         private void OnTriggerExit(Collider other)
         {
-            CursorPlaneCollideExit(other);
-            PlaceableObjectExit(other);
-        }
-        
-        // todo решить проблему множественного селекта/деселекта при пересечениях
+            if (other.TryGetComponent(out CursorPlane _))
+                OnCursorExit();
 
-        private void CursorPlaneCollideEnter(Collider other)
-        {
-            if (other.GetComponent<CursorPlane>() && _state != CellState.Selected)
-                UpdateState(CellState.ActiveLayer);
+            if (other.TryGetComponent(out PlaceableObject.PlaceableObject _))
+                OnPlaceableExit();
         }
 
-        private void CursorPlaneCollideExit(Collider other)
+        private void OnCursorEnter()
         {
-            if (other.GetComponent<CursorPlane>() && _state != CellState.Selected)
-                UpdateState(CellState.DisabledLayer);
+            if (_state != CellState.Selected)
+                SetState(CellState.ActiveLayer);
         }
 
-        private void PlaceableObjectStay(Collider other)
+        private void OnCursorExit()
         {
-            var placeableObject = other.GetComponent<PlaceableObject.PlaceableObject>();
+            if (_state != CellState.Selected)
+                SetState(CellState.DisabledLayer);
+        }
 
-            if (!placeableObject)
-                return;
-
-            if (_state is CellState.DisabledLayer or CellState.ActiveLayer)
+        private void OnPlaceableStay()
+        {
+            switch (_state)
             {
-                _previousState = _state;
-                UpdateState(CellState.Hovered);
+                case CellState.DisabledLayer or CellState.ActiveLayer:
+                    _previousState = _state;
+                    SetState(CellState.Hovered);
+                    break;
+                case CellState.Selected:
+                    SetState(CellState.HoveredSelected);
+                    break;
             }
-
-            if (_state == CellState.Selected)
-                UpdateState(CellState.HoveredSelected);
         }
 
-        private void PlaceableObjectExit(Collider other)
+        private void OnPlaceableExit()
         {
-            if (!other.GetComponent<PlaceableObject.PlaceableObject>())
-                return;
-
-            if (_state is CellState.Hovered)
-                UpdateState(_previousState);
-            
-            if (_state is CellState.HoveredSelected)
-                UpdateState(CellState.Selected);
+            switch (_state)
+            {
+                case CellState.Hovered:
+                    SetState(_previousState);
+                    break;
+                case CellState.HoveredSelected:
+                    SetState(CellState.Selected);
+                    break;
+            }
         }
-        
-        private void UpdateState(CellState newState)
+
+        private void SetState(CellState newState)
         {
             _state = newState;
-            _cellRenderer.material.color = _state switch
+            ApplyVisualForState(newState);
+        }
+
+        private void ApplyVisualForState(CellState state)
+        {
+            _cellRenderer.material.color = state switch
             {
                 CellState.DisabledLayer => Color.black,
                 CellState.ActiveLayer => Color.white,
@@ -121,12 +117,13 @@ namespace GameBoard
 
         public void Deactivate()
         {
-            UpdateState(CellState.DisabledLayer);
+            SetState(CellState.DisabledLayer);
             enabled = false;
         }
 
         public void UpdateMode()
         {
+            // Метод из интерфейса, пока не используется
         }
     }
 }

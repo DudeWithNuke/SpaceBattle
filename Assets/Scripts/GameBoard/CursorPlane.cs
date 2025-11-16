@@ -19,7 +19,7 @@ namespace GameBoard
 
         private void OnCellGridInitialized(CellGrid cellGrid)
         {
-            layersCount = cellGrid.gridSize.y;
+            layersCount = 5; //cellGrid.gridSize.y;
             currentLayer = layersCount / 2;
         }
         

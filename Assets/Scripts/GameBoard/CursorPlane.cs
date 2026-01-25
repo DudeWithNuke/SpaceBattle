@@ -1,30 +1,25 @@
-﻿using DefaultNamespace;
 using UnityEngine;
+using Reflex.Attributes;
 namespace GameBoard
 {
-    public class CursorPlane : CustomMonoBehaviour<CursorPlane>, IInteractionMode
+    public class CursorPlane : MonoBehaviour
     {
         private const KeyCode UpButton = KeyCode.UpArrow; 
         private const KeyCode DownButton = KeyCode.DownArrow;
+
+        [Inject] 
+        private CellGrid _cellGrid;
 
         public Plane Plane { get; private set; }
 
         public int layersCount;
         public int currentLayer;
-
-        private void Awake()
-        {
-            SubscribeOnInitialize<CellGrid>(OnCellGridInitialized);
-        }
-
-        private void OnCellGridInitialized(CellGrid cellGrid)
-        {
-            layersCount = 5; //cellGrid.gridSize.y;
-            currentLayer = layersCount / 2;
-        }
         
-        protected override void SetUp()
+        private void Start()
         {
+            layersCount = _cellGrid.GridSize.y;
+            currentLayer = layersCount / 2;
+
             gameObject.transform.position = GetActualPosition();
             Plane = new Plane(Vector3.up, GetActualPosition());
             Refresh();

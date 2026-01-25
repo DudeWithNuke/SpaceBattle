@@ -1,13 +1,17 @@
-﻿using GameBoard;
+using GameBoard;
+using Reflex.Attributes;
 using UnityEngine;
 using Utils;
 
 namespace PlaceableObject
 {
-    public class ObjectMoving : CustomMonoBehaviour<ObjectMoving>
+    public class ObjectMoving : MonoBehaviour
     {
         private Camera _camera;
+        [Inject] 
         private CursorPlane _cursorPlane;
+        [Inject] 
+        private ObjectSelection _objectSelection;
         private PlaceableObject _placeableObject;
 
         private const float MoveSpeed = 50f;
@@ -17,11 +21,10 @@ namespace PlaceableObject
 
         private void Awake()
         {
-            SubscribeOnInitialize<CursorPlane>(cursorPlane => _cursorPlane = cursorPlane);
-            SubscribeOnInitialize<ObjectSelection>(objectSelection => objectSelection.OnStateChanged += placeableObject => _placeableObject = placeableObject);
+            _objectSelection.OnStateChanged += placeableObject => _placeableObject = placeableObject;
         }
-        
-        protected override void SetUp()
+
+        private void Start()
         {
             _camera = Camera.main;
         }
@@ -30,7 +33,7 @@ namespace PlaceableObject
         {
             if (!_placeableObject || _placeableObject.State != PlaceableObjectState.Picked)
                 return;
-            
+
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (!_cursorPlane.Plane.Raycast(ray, out var distance))
                 return;

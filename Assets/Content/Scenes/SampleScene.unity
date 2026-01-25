@@ -1704,8 +1704,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 658783722452520885, guid: 4a7ad02c8bd6a59498b58c954fd963cb, type: 3}
-  gridSize: {x: 5, y: 3, z: 5}
-  outputCells: []
+  gridSize: {x: 10, y: 10, z: 10}
+  ownOrigin: {x: -20, y: 0, z: 0}
+  enemyOrigin: {x: 20, y: 0, z: 0}
 --- !u!4 &1629808315
 Transform:
   m_ObjectHideFlags: 0

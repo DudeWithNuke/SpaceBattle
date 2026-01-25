@@ -1,9 +1,8 @@
-﻿using DefaultNamespace;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace GameBoard
 {
-    public class Cell : MonoBehaviour, IInteractionMode
+    public class Cell : MonoBehaviour
     {
         private Renderer _cellRenderer;
         private Vector3Int _position;

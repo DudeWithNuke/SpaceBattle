@@ -1,13 +1,13 @@
 using System.Collections.Generic;
-using DefaultNamespace;
 using UnityEngine;
 
 namespace GameBoard
 {
-    public class CellGrid : CustomMonoBehaviour<CellGrid>, IInteractionMode
+    public class CellGrid : MonoBehaviour
     {
         [SerializeField] private Cell prefab;
         [SerializeField] private Vector3Int gridSize;
+        public Vector3Int GridSize => gridSize;
 
         [SerializeField] private Vector3 ownOrigin;
         [SerializeField] private Vector3 enemyOrigin;
@@ -15,7 +15,7 @@ namespace GameBoard
         private List<Cell> _ownCells;
         private List<Cell> _enemyCells;
 
-        protected override void SetUp()
+        private void Awake()
         {
             gridSize = new Vector3Int(
                 Mathf.Max(gridSize.x, 0),
@@ -46,8 +46,6 @@ namespace GameBoard
             }
         }
         
-        
-
         private static void Clear(List<Cell> cells)
         {
             if (cells == null || cells.Count == 0)

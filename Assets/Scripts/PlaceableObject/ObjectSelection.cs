@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UI;
@@ -6,10 +6,9 @@ using UnityEngine;
 
 namespace PlaceableObject
 {
-    public class ObjectSelection : CustomMonoBehaviour<ObjectSelection>
+    public class ObjectSelection : MonoBehaviour
     { 
         public event Action<PlaceableObject> OnStateChanged;
-
         [SerializeField] public List<PlaceableObject> placeableObjects;
         private PlaceableObject _currentSelectedPlaceableObject;
         
@@ -18,7 +17,7 @@ namespace PlaceableObject
 
         private Dictionary<PlaceableObject, ShipButton> _shipButtons;
         
-        protected override void SetUp()
+        private void Awake()
         {
             CreateButtons();
             ShipButton.OnObjectSpawned += OnObjectSpawned;

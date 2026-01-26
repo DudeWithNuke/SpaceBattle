@@ -52,6 +52,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: cell
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 05e565044b11c35488d1c76eb1779b63, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -104,7 +108,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dea33d0a6604b8b9a89e936f1a02e32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _previousState: 0
 --- !u!54 &7545304806945841415
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -112,10 +115,10 @@ Rigidbody:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7836763285383037904}
-  serializedVersion: 4
+  serializedVersion: 5
   m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0
+  m_LinearDamping: 0
+  m_AngularDamping: 0
   m_CenterOfMass: {x: 0, y: 0, z: 0}
   m_InertiaTensor: {x: 1, y: 1, z: 1}
   m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}

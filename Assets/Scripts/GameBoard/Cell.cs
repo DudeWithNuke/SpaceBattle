@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace GameBoard
 {
@@ -10,17 +11,26 @@ namespace GameBoard
         private CellState _state;
         private CellState _previousState;
 
+        public bool IsPlayerCell { get; set; }
+
+        public Collider CellCollider { get; private set; }
+
         private void Awake()
         {
+            CellCollider = GetComponent<Collider>();
             _cellRenderer = GetComponent<Renderer>();
         }
 
-        public void Initialize(Vector3Int position)
+        public void Initialize(Vector3Int position, bool isPlayerCell)
         {
             _position = position;
-
             gameObject.layer = _position.y;
-            gameObject.name = $"X: {_position.x}, Y: {_position.y}, Z: {_position.z}";
+            
+            IsPlayerCell = isPlayerCell;
+            gameObject.name = $" {(IsPlayerCell ? "Player" : "Enemy")} " +
+                              $"X: {_position.x}, " +
+                              $"Y: {_position.y}, " +
+                              $"Z: {_position.z}";
 
             SetState(CellState.DisabledLayer);
         }

@@ -11,9 +11,10 @@ namespace GameBoard
 
         [SerializeField] private Vector3 ownOrigin;
         [SerializeField] private Vector3 enemyOrigin;
-        
-        private List<Cell> _ownCells;
-        private List<Cell> _enemyCells;
+
+        public List<Cell> PlayerCells { get; private set; }
+
+        public List<Cell> EnemyCells { get; private set; }
 
         private void Awake()
         {
@@ -23,17 +24,17 @@ namespace GameBoard
                 Mathf.Max(gridSize.z, 0)
             );
 
-            Clear(_ownCells);
-            Clear(_enemyCells);
+            Clear(PlayerCells);
+            Clear(EnemyCells);
             
-            _ownCells = new List<Cell>();
-            _enemyCells = new List<Cell>();
+            PlayerCells = new List<Cell>();
+            EnemyCells = new List<Cell>();
             
-            Create(_ownCells, ownOrigin);
-            Create(_enemyCells, enemyOrigin);
+            Create(PlayerCells, ownOrigin, true);
+            Create(EnemyCells, enemyOrigin, false);
         }
 
-        private void Create(List<Cell> cells, Vector3 origin)
+        private void Create(List<Cell> cells, Vector3 origin, bool isPlayerCell)
         { 
             for (var x = 0; x < gridSize.x; x++)
             for (var y = 0; y < gridSize.y; y++)
@@ -41,7 +42,7 @@ namespace GameBoard
             {
                 var localPos = origin + new Vector3(x, y, z);
                 var cell = Instantiate(prefab, localPos, Quaternion.identity, transform);
-                cell.Initialize(new Vector3Int(x, y, z));
+                cell.Initialize(new Vector3Int(x, y, z), isPlayerCell);
                 cells.Add(cell);
             }
         }
@@ -58,13 +59,13 @@ namespace GameBoard
         
         public void Activate()
         {
-            foreach (var cell in _ownCells)
+            foreach (var cell in PlayerCells)
                 cell.Activate();
         }
 
         public void Deactivate()
         {
-            foreach (var cell in _ownCells)
+            foreach (var cell in PlayerCells)
                 cell.Deactivate();
         }
 
@@ -72,7 +73,5 @@ namespace GameBoard
         {
             // Пока пустой, возможно в будущем
         }
-
-        public IReadOnlyList<Cell> GetCells() => _ownCells;
     }
 }

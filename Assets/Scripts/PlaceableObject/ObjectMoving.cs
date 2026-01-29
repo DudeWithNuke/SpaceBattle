@@ -33,6 +33,12 @@ namespace PlaceableObject
         {
             if (!_placeableObject || _placeableObject.State != PlaceableObjectState.Picked)
                 return;
+            
+            if (_placeableObject.Shape == null)
+            {
+                Debug.LogError("Shape is null in PlaceableObject!");
+                return;
+            }
 
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (!_cursorPlane.Plane.Raycast(ray, out var distance))
@@ -49,15 +55,14 @@ namespace PlaceableObject
             var yOffset = 0f;
             var zOffset = 0f;
 
-            foreach (var objectCollider in _placeableObject.BoxColliders)
-            {
-                if (MathUtils.IsGreaterThanOdd(objectCollider.size.x))
-                    xOffset = 0.5f;
-                if (MathUtils.IsGreaterThanOdd(objectCollider.size.y))
-                    yOffset = 0.5f;
-                if (MathUtils.IsGreaterThanOdd(objectCollider.size.z))
-                    zOffset = 0.5f;
-            }
+            var bounds = _placeableObject.Shape.GetBounds();
+            
+            if (bounds.size.x % 2 == 0)
+                xOffset = 0.5f;
+            if (bounds.size.y % 2 == 0)
+                yOffset = 0.5f;
+            if (bounds.size.z % 2 == 0)
+                zOffset = 0.5f;
 
             var x = Mathf.RoundToInt(mousePositionOnPlane.x) + xOffset;
             var z = Mathf.RoundToInt(mousePositionOnPlane.z) + zOffset;
@@ -67,6 +72,14 @@ namespace PlaceableObject
         private void Move(Vector3 targetPosition)
         {
             _placeableObject.transform.position = Vector3.MoveTowards(_placeableObject.transform.position, targetPosition, MoveSpeed * Time.deltaTime);
+            
+            // Обновляем текущую позицию объекта в его координатах
+            var currentPos = _placeableObject.transform.position;
+            _placeableObject.CurrentPosition = new Vector3Int(
+                Mathf.RoundToInt(currentPos.x),
+                Mathf.RoundToInt(currentPos.y),
+                Mathf.RoundToInt(currentPos.z)
+            );
         }
 
         private void CheckMoving()

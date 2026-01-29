@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
 using GameBoard;
 using Reflex.Attributes;
 using UnityEngine;
 
 namespace PlaceableObject
 {
-    public class PlaceableObject : MonoBehaviour
+    public abstract class PlaceableObject : MonoBehaviour
     { 
         public event Action<PlaceableObject> OnPlaced;
         public event Action<PlaceableObject> OnPicked;
@@ -14,10 +13,16 @@ namespace PlaceableObject
         private Camera _camera;
         
         public PlaceableObjectState State { get; private set; }
-        [SerializeField] public BoxCollider[] BoxColliders;
+        public PlaceableObjectShape Shape { get; private set; }
+        public Vector3Int CurrentPosition { get; set; }
         
-        //todo написать фабрику для создания placeable object, тут связать через нормальный DI
-        private CellGrid _cellGrid;
+        [Inject] private CellGrid _cellGrid;
+        
+        private void Awake()
+        {
+            Shape = ScriptableObject.CreateInstance<PlaceableObjectShape>();
+            DefineShape(Shape);
+        }
         
         private void Start()
         {
@@ -52,14 +57,15 @@ namespace PlaceableObject
 
         private bool IsWithinGridBounds()
         { 
-            var allCells = _cellGrid.EnemyCells;
-            var cellColliders = new Collider[allCells.Count];
+            var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
             
-            for (var i = 0; i < allCells.Count; i++)
-                cellColliders[i] = allCells[i].CellCollider;
-
-            var overlappingCells = GetOverlappingCells(cellColliders);
-            return overlappingCells.Count > 0;
+            foreach (var cellPos in occupiedCells)
+                if (cellPos.x < 0 || cellPos.x >= _cellGrid.GridSize.x ||
+                    cellPos.y < 0 || cellPos.y >= _cellGrid.GridSize.y ||
+                    cellPos.z < 0 || cellPos.z >= _cellGrid.GridSize.z)
+                    return false;
+            
+            return true;
         }
 
         private void Place()
@@ -76,20 +82,7 @@ namespace PlaceableObject
             State = PlaceableObjectState.Picked;
             OnPicked?.Invoke(this);
         }
-
-        private HashSet<Cell> GetOverlappingCells(Collider[] cellColliders)
-        {
-            var overlappingCells = new HashSet<Cell>();
-
-            foreach (var boxCollider in BoxColliders)
-            {
-                var hits = Physics.OverlapBoxNonAlloc(boxCollider.transform.position, boxCollider.bounds.extents, cellColliders, transform.rotation);
-                for (var i = 0; i < hits; i++)
-                    if (cellColliders[i] && cellColliders[i].TryGetComponent<Cell>(out var cell))
-                        overlappingCells.Add(cell);
-            }
-
-            return overlappingCells;
-        }
+        
+        protected abstract void DefineShape(PlaceableObjectShape shape);
     }
 }

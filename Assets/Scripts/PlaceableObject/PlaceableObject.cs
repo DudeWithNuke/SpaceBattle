@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using GameBoard;
 using Reflex.Attributes;
 using UnityEngine;
@@ -15,9 +17,16 @@ namespace PlaceableObject
         public PlaceableObjectState State { get; private set; }
         public PlaceableObjectShape Shape { get; private set; }
         public Vector3Int CurrentPosition { get; set; }
+        public bool IsPlayerObject { get; set; }
         
         [Inject] private CellGrid _cellGrid;
+        [Inject] private CursorPlane _cursorPlane;
         
+        private Vector3Int[] _previousOccupiedCells;
+        private bool _isHoveringCells;
+        
+        private Vector3 _targetWorldPosition;
+
         private void Awake()
         {
             Shape = ScriptableObject.CreateInstance<PlaceableObjectShape>();
@@ -28,6 +37,17 @@ namespace PlaceableObject
         {
             _camera = Camera.main;
             State = PlaceableObjectState.Picked;
+            _isHoveringCells = false;
+            
+            // Определяем принадлежность объекта на основе начальной позиции
+            var startPos = transform.position;
+            var distanceToPlayer = Vector3.Distance(startPos, _cellGrid.PlayerOrigin);
+            var distanceToEnemy = Vector3.Distance(startPos, _cellGrid.EnemyOrigin);
+            IsPlayerObject = distanceToPlayer <= distanceToEnemy;
+            
+            // Устанавливаем начальную позицию в координатах клетки
+            CurrentPosition = WorldToCellPosition(startPos);
+            _targetWorldPosition = CellToWorldPosition(CurrentPosition);
         }
         
         private void Update()
@@ -37,7 +57,7 @@ namespace PlaceableObject
             
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
             
-            var placeableObjectLayerMask = 1 << LayerMask.NameToLayer("PlaceableObjectLayer");
+            var placeableObjectLayerMask = 1 << LayerMask.NameToLayer(PlaceableObjectConfig.PlaceableObjectLayerName);
             if (!Physics.Raycast(ray, out var hit, Mathf.Infinity, placeableObjectLayerMask) 
                 || hit.collider.gameObject != gameObject) 
                 return;
@@ -53,6 +73,86 @@ namespace PlaceableObject
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (State == PlaceableObjectState.Picked)
+            {
+                UpdatePosition();
+                UpdateCellHover();
+            }
+        }
+
+        private void UpdatePosition()
+        {
+            var ray = _camera.ScreenPointToRay(Input.mousePosition);
+            
+            var groundLayerMask = (1 << LayerMask.NameToLayer(PlaceableObjectConfig.GroundLayerName)) | 
+                                 (1 << LayerMask.NameToLayer(PlaceableObjectConfig.DefaultLayerName));
+            if (Physics.Raycast(ray, out var hit, Mathf.Infinity, groundLayerMask))
+            {
+                var newPosition = WorldToCellPosition(hit.point);
+                
+                // Принудительно устанавливаем Y координату из текущего слоя CursorPlane
+                newPosition = new Vector3Int(newPosition.x, _cursorPlane.currentLayer, newPosition.z);
+                
+                // Если камера движется вертикально - блокируем горизонтальное движение
+                if (_cursorPlane.IsCameraMovingVertically)
+                {
+                    // Меняем только Y координату, сохраняем X/Z
+                    newPosition = new Vector3Int(CurrentPosition.x, newPosition.y, CurrentPosition.z);
+                }
+                
+                if (newPosition != CurrentPosition)
+                {
+                    CurrentPosition = newPosition;
+                    _targetWorldPosition = CellToWorldPosition(CurrentPosition);
+                }
+            }
+            
+            // Плавное движение к целевой позиции
+            if (Vector3.Distance(transform.position, _targetWorldPosition) > PlaceableObjectConfig.PositionThreshold)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, _targetWorldPosition, PlaceableObjectConfig.MoveSpeed * Time.deltaTime);
+            }
+        }
+
+        private Vector3Int WorldToCellPosition(Vector3 worldPosition)
+        {
+            var origin = IsPlayerObject ? _cellGrid.PlayerOrigin : _cellGrid.EnemyOrigin;
+            return CoordinateConverter.WorldToCellPosition(worldPosition, origin, _cursorPlane.currentLayer, PlaceableObjectConfig.CoordinateRoundingOffset);
+        }
+
+        private Vector3 CellToWorldPosition(Vector3Int cellPosition)
+        {
+            var origin = IsPlayerObject ? _cellGrid.PlayerOrigin : _cellGrid.EnemyOrigin;
+            return CoordinateConverter.CellToWorldPosition(cellPosition, origin, PlaceableObjectConfig.CellCenterOffset);
+        }
+
+        private void UpdateCellHover()
+        {
+            var currentOccupiedCells = Shape.GetOccupiedCells(CurrentPosition);
+            
+            // Сбрасываем предыдущие клетки
+            if (_previousOccupiedCells != null)
+            {
+                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+            }
+            
+            // Устанавливаем новые клетки
+            if (IsWithinGridBounds())
+            {
+                _cellGrid.SetPlaceableHoverForCells(currentOccupiedCells, IsPlayerObject, true);
+                _isHoveringCells = true;
+            }
+            else if (_isHoveringCells)
+            {
+                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+                _isHoveringCells = false;
+            }
+            
+            _previousOccupiedCells = currentOccupiedCells;
         }
 
         private bool IsWithinGridBounds()
@@ -74,13 +174,44 @@ namespace PlaceableObject
                 return;
             
             State = PlaceableObjectState.Placed;
+            
+            // Сбрасываем hover состояние перед размещением
+            if (_previousOccupiedCells != null)
+            {
+                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+            }
+            
+            // Устанавливаем выбранное состояние для занятых клеток
+            var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
+            _cellGrid.SetSelectedForCells(occupiedCells, IsPlayerObject, true);
+            
             OnPlaced?.Invoke(this);
         }
 
         private void Pick()
         {
             State = PlaceableObjectState.Picked;
+            
+            // Сбрасываем выбранное состояние при подборе
+            var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
+            _cellGrid.SetSelectedForCells(occupiedCells, IsPlayerObject, false);
+            
             OnPicked?.Invoke(this);
+        }
+
+        private void OnDestroy()
+        {
+            // Очищаем состояние клеток при уничтожении объекта
+            if (_previousOccupiedCells != null)
+            {
+                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+            }
+            
+            if (State == PlaceableObjectState.Placed)
+            {
+                var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
+                _cellGrid.SetSelectedForCells(occupiedCells, IsPlayerObject, false);
+            }
         }
         
         protected abstract void DefineShape(PlaceableObjectShape shape);

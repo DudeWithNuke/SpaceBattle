@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace GameBoard
@@ -14,6 +14,7 @@ namespace GameBoard
         public bool IsPlayerCell { get; set; }
 
         public Collider CellCollider { get; private set; }
+        public Vector3Int Position => _position;
 
         private void Awake()
         {
@@ -40,83 +41,10 @@ namespace GameBoard
             Destroy(gameObject);
         }
 
-        private void OnTriggerEnter(Collider other)
-        {
-            if (other.TryGetComponent(out CursorPlane _))
-                OnCursorEnter();
-        }
-
-        private void OnTriggerStay(Collider other)
-        {
-            if (other.TryGetComponent(out PlaceableObject.PlaceableObject _))
-                OnPlaceableStay();
-        }
-
-        private void OnTriggerExit(Collider other)
-        {
-            if (other.TryGetComponent(out CursorPlane _))
-                OnCursorExit();
-
-            if (other.TryGetComponent(out PlaceableObject.PlaceableObject _))
-                OnPlaceableExit();
-        }
-
-        private void OnCursorEnter()
-        {
-            if (_state != CellState.Selected)
-                SetState(CellState.ActiveLayer);
-        }
-
-        private void OnCursorExit()
-        {
-            if (_state != CellState.Selected)
-                SetState(CellState.DisabledLayer);
-        }
-
-        private void OnPlaceableStay()
-        {
-            switch (_state)
-            {
-                case CellState.DisabledLayer or CellState.ActiveLayer:
-                    _previousState = _state;
-                    SetState(CellState.Hovered);
-                    break;
-                case CellState.Selected:
-                    SetState(CellState.HoveredSelected);
-                    break;
-            }
-        }
-
-        private void OnPlaceableExit()
-        {
-            switch (_state)
-            {
-                case CellState.Hovered:
-                    SetState(_previousState);
-                    break;
-                case CellState.HoveredSelected:
-                    SetState(CellState.Selected);
-                    break;
-            }
-        }
-
         private void SetState(CellState newState)
         {
             _state = newState;
-            ApplyVisualForState(newState);
-        }
-
-        private void ApplyVisualForState(CellState state)
-        {
-            _cellRenderer.material.color = state switch
-            {
-                CellState.DisabledLayer => Color.black,
-                CellState.ActiveLayer => Color.white,
-                CellState.Hovered => Color.yellow,
-                CellState.Selected => Color.green,
-                CellState.HoveredSelected => Color.cyan,
-                _ => _cellRenderer.material.color
-            };
+            CellVisualManager.ApplyVisualState(_cellRenderer, newState);
         }
 
         public void Activate()
@@ -130,9 +58,51 @@ namespace GameBoard
             enabled = false;
         }
 
-        public void UpdateMode()
+        public void SetCursorHover(bool isHovering)
         {
-            // Метод из интерфейса, пока не используется
+            if (_state != CellState.Selected)
+                SetState(isHovering ? CellState.ActiveLayer : CellState.DisabledLayer);
+        }
+
+        public void SetPlaceableHover(bool isHovering)
+        {
+            switch (_state)
+            {
+                case CellState.DisabledLayer:
+                    if (isHovering)
+                    {
+                        _previousState = _state;
+                        SetState(CellState.Hovered);
+                    }
+                    break;
+                case CellState.ActiveLayer:
+                    if (isHovering)
+                    {
+                        _previousState = _state;
+                        SetState(CellState.Hovered);
+                    }
+                    else
+                    {
+                        SetState(_previousState);
+                    }
+                    break;
+                case CellState.Selected:
+                    SetState(isHovering ? CellState.HoveredSelected : CellState.Selected);
+                    break;
+                case CellState.Hovered:
+                    if (!isHovering)
+                        SetState(_previousState);
+                    break;
+                case CellState.HoveredSelected:
+                    if (!isHovering)
+                        SetState(CellState.Selected);
+                    break;
+            }
+        }
+
+        public void SetSelected(bool isSelected)
+        {
+            SetState(isSelected ? CellState.Selected : CellState.DisabledLayer);
         }
     }
 }

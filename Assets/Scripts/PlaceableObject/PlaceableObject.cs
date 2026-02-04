@@ -137,18 +137,33 @@ namespace PlaceableObject
             // Сбрасываем предыдущие клетки
             if (_previousOccupiedCells != null)
             {
-                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+                foreach (var cellPos in _previousOccupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell != null)
+                        cell.SetPlaceableHover(false);
+                }
             }
             
             // Устанавливаем новые клетки
             if (IsWithinGridBounds())
             {
-                _cellGrid.SetPlaceableHoverForCells(currentOccupiedCells, IsPlayerObject, true);
+                foreach (var cellPos in currentOccupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell != null)
+                        cell.SetPlaceableHover(true);
+                }
                 _isHoveringCells = true;
             }
             else if (_isHoveringCells)
             {
-                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+                foreach (var cellPos in _previousOccupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell != null)
+                        cell.SetPlaceableHover(false);
+                }
                 _isHoveringCells = false;
             }
             
@@ -178,12 +193,22 @@ namespace PlaceableObject
             // Сбрасываем hover состояние перед размещением
             if (_previousOccupiedCells != null)
             {
-                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+                foreach (var cellPos in _previousOccupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell != null)
+                        cell.SetPlaceableHover(false);
+                }
             }
             
             // Устанавливаем выбранное состояние для занятых клеток
             var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
-            _cellGrid.SetSelectedForCells(occupiedCells, IsPlayerObject, true);
+            foreach (var cellPos in occupiedCells)
+            {
+                var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                if (cell != null)
+                    cell.SetSelected(true);
+            }
             
             OnPlaced?.Invoke(this);
         }
@@ -194,7 +219,12 @@ namespace PlaceableObject
             
             // Сбрасываем выбранное состояние при подборе
             var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
-            _cellGrid.SetSelectedForCells(occupiedCells, IsPlayerObject, false);
+            foreach (var cellPos in occupiedCells)
+            {
+                var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                if (cell != null)
+                    cell.SetSelected(false);
+            }
             
             OnPicked?.Invoke(this);
         }
@@ -204,13 +234,23 @@ namespace PlaceableObject
             // Очищаем состояние клеток при уничтожении объекта
             if (_previousOccupiedCells != null)
             {
-                _cellGrid.SetPlaceableHoverForCells(_previousOccupiedCells, IsPlayerObject, false);
+                foreach (var cellPos in _previousOccupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell != null)
+                        cell.SetPlaceableHover(false);
+                }
             }
             
             if (State == PlaceableObjectState.Placed)
             {
                 var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
-                _cellGrid.SetSelectedForCells(occupiedCells, IsPlayerObject, false);
+                foreach (var cellPos in occupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell != null)
+                        cell.SetSelected(false);
+                }
             }
         }
         

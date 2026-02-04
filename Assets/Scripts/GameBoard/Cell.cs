@@ -7,19 +7,16 @@ namespace GameBoard
     {
         private Renderer _cellRenderer;
         private Vector3Int _position;
-
-        private CellState _state;
-        private CellState _previousState;
-
+        private CellStateController _stateController;
+        
         public bool IsPlayerCell { get; set; }
 
-        public Collider CellCollider { get; private set; }
         public Vector3Int Position => _position;
 
         private void Awake()
         {
-            CellCollider = GetComponent<Collider>();
             _cellRenderer = GetComponent<Renderer>();
+            _stateController = new CellStateController(_cellRenderer);
         }
 
         public void Initialize(Vector3Int position, bool isPlayerCell)
@@ -32,8 +29,6 @@ namespace GameBoard
                               $"X: {_position.x}, " +
                               $"Y: {_position.y}, " +
                               $"Z: {_position.z}";
-
-            SetState(CellState.DisabledLayer);
         }
 
         public void DestroySelf()
@@ -41,68 +36,58 @@ namespace GameBoard
             Destroy(gameObject);
         }
 
-        private void SetState(CellState newState)
+        public void ActivateLayer()
         {
-            _state = newState;
-            CellVisualManager.ApplyVisualState(_cellRenderer, newState);
+            if (_stateController.CurrentState != CellState.ActiveLayer)
+                _stateController.SetState(CellState.ActiveLayer);
         }
 
-        public void Activate()
+        public void DisableLayer()
         {
-            enabled = true;
-        }
-
-        public void Deactivate()
-        {
-            SetState(CellState.DisabledLayer);
-            enabled = false;
-        }
-
-        public void SetCursorHover(bool isHovering)
-        {
-            if (_state != CellState.Selected)
-                SetState(isHovering ? CellState.ActiveLayer : CellState.DisabledLayer);
+            if (_stateController.CurrentState != CellState.DisabledLayer)
+                _stateController.SetState(CellState.DisabledLayer);
         }
 
         public void SetPlaceableHover(bool isHovering)
         {
-            switch (_state)
+            if (isHovering)
+                SetHoveredState();
+            else
+                RestoreNonHoveredState();
+        }
+
+        private void SetHoveredState()
+        {
+            switch (_stateController.CurrentState)
             {
                 case CellState.DisabledLayer:
-                    if (isHovering)
-                    {
-                        _previousState = _state;
-                        SetState(CellState.Hovered);
-                    }
-                    break;
                 case CellState.ActiveLayer:
-                    if (isHovering)
-                    {
-                        _previousState = _state;
-                        SetState(CellState.Hovered);
-                    }
-                    else
-                    {
-                        SetState(_previousState);
-                    }
+                    _stateController.SetState(CellState.Hovered);
                     break;
                 case CellState.Selected:
-                    SetState(isHovering ? CellState.HoveredSelected : CellState.Selected);
+                    _stateController.SetState(CellState.HoveredSelected);
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private void RestoreNonHoveredState()
+        {
+            switch (_stateController.CurrentState)
+            {
                 case CellState.Hovered:
-                    if (!isHovering)
-                        SetState(_previousState);
+                    _stateController.RestorePreviousState();
                     break;
                 case CellState.HoveredSelected:
-                    if (!isHovering)
-                        SetState(CellState.Selected);
+                    _stateController.SetState(CellState.Selected);
                     break;
             }
         }
 
         public void SetSelected(bool isSelected)
         {
-            SetState(isSelected ? CellState.Selected : CellState.DisabledLayer);
+            _stateController.SetState(CellState.Selected);
         }
     }
 }

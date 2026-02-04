@@ -69,82 +69,10 @@ namespace GameBoard
             cells.Clear();
         }
         
-        public void Activate()
-        {
-            foreach (var cell in PlayerCells)
-                cell.Activate();
-        }
-
-        public void Deactivate()
-        {
-            foreach (var cell in PlayerCells)
-                cell.Deactivate();
-        }
-        
-        // Новые методы для координатной работы с клетками
         public Cell GetCell(Vector3Int position, bool isPlayerCell)
         {
             var cellMap = isPlayerCell ? _playerCellMap : _enemyCellMap;
             return cellMap.GetValueOrDefault(position);
-        }
-
-        public IEnumerable<Cell> GetCellsInPositions(IEnumerable<Vector3Int> positions, bool isPlayerCell)
-        {
-            var cellMap = isPlayerCell ? _playerCellMap : _enemyCellMap;
-            return positions.Select(pos => cellMap.GetValueOrDefault(pos))
-                           .Where(cell => cell);
-        }
-
-        public void UpdateCellsForPlaceableObject(IEnumerable<Vector3Int> positions, bool isPlayerCell, System.Action<Cell> updateAction)
-        {
-            var cells = GetCellsInPositions(positions, isPlayerCell);
-            foreach (var cell in cells)
-                updateAction(cell);
-        }
-
-        public void SetCursorHoverForCells(IEnumerable<Vector3Int> positions, bool isPlayerCell, bool isHovering)
-        {
-            UpdateCellsForPlaceableObject(positions, isPlayerCell, cell => cell.SetCursorHover(isHovering));
-        }
-
-        public void SetPlaceableHoverForCells(IEnumerable<Vector3Int> positions, bool isPlayerCell, bool isHovering)
-        {
-            UpdateCellsForPlaceableObject(positions, isPlayerCell, cell => cell.SetPlaceableHover(isHovering));
-        }
-
-        public void SetSelectedForCells(IEnumerable<Vector3Int> positions, bool isPlayerCell, bool isSelected)
-        {
-            UpdateCellsForPlaceableObject(positions, isPlayerCell, cell => cell.SetSelected(isSelected));
-        }
-
-        // Активация/деактивация клеток только определенного слоя
-        public void SetLayerActive(int layerIndex, bool isPlayerCell, bool isActive)
-        {
-            var cells = isPlayerCell ? PlayerCells : EnemyCells;
-            foreach (var cell in cells)
-            {
-                if (cell.Position.y == layerIndex)
-                {
-                    if (isActive)
-                    {
-                        cell.Activate();
-                        // Выделяем активный слой белым
-                        cell.SetCursorHover(true);
-                    }
-                    else
-                    {
-                        cell.Deactivate();
-                        // Сбрасываем выделение
-                        cell.SetCursorHover(false);
-                    }
-                }
-                else
-                {
-                    cell.Deactivate();
-                    // Сбрасываем выделение для неактивных слоев
-                    cell.SetCursorHover(false);
-                }
-            }
         }
     }
 }

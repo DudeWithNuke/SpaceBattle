@@ -207,6 +207,7 @@ GameObject:
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -282,11 +283,11 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: -0.087172166, y: 0.8995906, z: -0.21045238, w: -0.3726225}
-  m_LocalPosition: {x: 30.36, y: 15.59, z: 14.97}
+  m_LocalPosition: {x: 14.7, y: 21, z: 26.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 510327797}
   m_LocalEulerAnglesHint: {x: 45.949, y: -145.332, z: -1.706}
 --- !u!114 &330585547
 MonoBehaviour:
@@ -348,6 +349,30 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   m_MaxRayIntersections: 1
+--- !u!114 &330585549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a1205452fd60765409e4a977406e59e7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  moveSpeed: 10
+  smoothTime: 0.1
+  positionThreshold: 0.01
+  zoomSpeed: 5
+  minZoomDistance: 5
+  maxZoomDistance: 50
+  boundaryMargin: 1
+  rotationSpeed: 2
+  minVerticalAngle: 10
+  maxVerticalAngle: 80
+  scrollSensitivity: 1
+  scrollThreshold: 0.1
 --- !u!1 &364116302
 GameObject:
   m_ObjectHideFlags: 0
@@ -637,6 +662,7 @@ Transform:
   - {fileID: 445403121}
   - {fileID: 1454200695}
   - {fileID: 2072068759}
+  - {fileID: 330585546}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &510327799
@@ -655,6 +681,7 @@ MonoBehaviour:
   cursorPlane: {fileID: 1980345878}
   objectSelection: {fileID: 445403122}
   objectMoving: {fileID: 1454200696}
+  cameraController: {fileID: 330585549}
 --- !u!114 &510327800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2390,7 +2417,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 510327797}
   - {fileID: 948187997}

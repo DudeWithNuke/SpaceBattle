@@ -9,69 +9,49 @@ namespace GameBoard
         private CellGrid _cellGrid;
 
         public Plane Plane { get; private set; }
+        public bool IsTransitioning { get; private set; }
 
         public int layersCount;
         public int currentLayer;
-        public bool IsCameraMovingVertically { get; private set; }
         
-        private Camera _camera;
+        private float _targetY;
 
         private void Start()
         {
-            _camera = Camera.main;
             layersCount = _cellGrid.GridSize.y;
             
             currentLayer = CursorPlaneConfig.DefaultStartLayer >= 0 ? 
                 CursorPlaneConfig.DefaultStartLayer : 
                 layersCount / 2;
 
-            gameObject.transform.position = GetActualPosition();
-            Plane = new Plane(Vector3.up, GetActualPosition());
-            Refresh();
+            _targetY = currentLayer;
+            gameObject.transform.position = GetActualPosition(_targetY);
+            Plane = new Plane(Vector3.up, gameObject.transform.position);
+            RefreshLayerState();
         }
         
         private void Update()
         {
             UpdateMode();
-            UpdateCameraPosition();
+            UpdateVerticalTransition();
         }
-        
-        public void UpdateMode()
+
+        private void UpdateMode()
         {
             var scroll = Input.GetAxis("Mouse ScrollWheel") * CursorPlaneConfig.ScrollSensitivity;
-            
-            if (Mathf.Abs(scroll) > CursorPlaneConfig.ScrollThreshold)
-                switch (scroll)
-                {
-                    case > 0f:
-                        Up();
-                        IsCameraMovingVertically = true;
-                        break;
-                    case < 0f:
-                        Down();
-                        IsCameraMovingVertically = true;
-                        break;
-                }
-            else
+
+            if (!(Mathf.Abs(scroll) > CursorPlaneConfig.ScrollThreshold)) return;
+            switch (scroll)
             {
-                var targetY = GetActualPosition().y + CursorPlaneConfig.CameraHeightOffset;
-                if (Mathf.Abs(_camera.transform.position.y - targetY) < CursorPlaneConfig.CameraStopThreshold)
-                    IsCameraMovingVertically = false;
+                case > 0f:
+                    Up();
+                    break;
+                case < 0f:
+                    Down();
+                    break;
             }
         }
 
-        private void UpdateCameraPosition()
-        {
-            if (!_camera) 
-                return;
-            
-            var targetPosition = new Vector3(_camera.transform.position.x, 
-                GetActualPosition().y + CursorPlaneConfig.CameraHeightOffset, 
-                _camera.transform.position.z);
-            _camera.transform.position = Vector3.Lerp(_camera.transform.position, 
-                targetPosition, 
-                CursorPlaneConfig.CameraFollowSpeed * Time.deltaTime);
-        }
 
         private void Up()
         {
@@ -79,7 +59,8 @@ namespace GameBoard
                 return;
 
             currentLayer++;
-            Refresh();
+            _targetY = currentLayer;
+            RefreshLayerState();
         }
 
         private void Down()
@@ -88,40 +69,58 @@ namespace GameBoard
                 return;
 
             currentLayer--;
-            Refresh();
+            _targetY = currentLayer;
+            RefreshLayerState();
         }
 
-        private void Refresh()
+        public void SetLayer(int layerIndex, bool immediate = false)
         {
-            gameObject.transform.position = GetActualPosition();
-            
+            var clampedLayer = Mathf.Clamp(layerIndex, 0, Mathf.Max(0, layersCount - 1));
+            currentLayer = clampedLayer;
+            _targetY = currentLayer;
+            RefreshLayerState();
+
+            if (!immediate)
+                return;
+
+            gameObject.transform.position = GetActualPosition(_targetY);
+            IsTransitioning = false;
             var newPlane = Plane;
-            newPlane.SetNormalAndPosition(Vector3.up, GetActualPosition());
+            newPlane.SetNormalAndPosition(Vector3.up, gameObject.transform.position);
             Plane = newPlane;
-            
+        }
+
+        private void UpdateVerticalTransition()
+        {
+            var currentPos = gameObject.transform.position;
+            var nextY = Mathf.MoveTowards(currentPos.y, _targetY, CursorPlaneConfig.VerticalTransitionSpeed * Time.deltaTime);
+            gameObject.transform.position = GetActualPosition(nextY);
+
+            IsTransitioning = !Mathf.Approximately(nextY, _targetY);
+
+            var newPlane = Plane;
+            newPlane.SetNormalAndPosition(Vector3.up, gameObject.transform.position);
+            Plane = newPlane;
+        }
+
+        private void RefreshLayerState()
+        {
             SetLayerActive(currentLayer, true, true);
         }
 
-        private Vector3 GetActualPosition()
+        private static Vector3 GetActualPosition(float y)
         {
-            return new Vector3(0, currentLayer, 0);
+            return new Vector3(0, y, 0);
         }
 
         private void SetLayerActive(int layerIndex, bool isPlayerCell, bool isActive)
         {
             var cells = isPlayerCell ? _cellGrid.PlayerCells : _cellGrid.EnemyCells;
             foreach (var cell in cells)
-            {
-                var isTargetLayer = cell.Position.y == layerIndex;
-                if (isTargetLayer && isActive)
-                {
+                if (cell.Position.y == layerIndex && isActive)
                     cell.ActivateLayer();
-                }
                 else
-                {
                     cell.DisableLayer();
-                }
-            }
         }
     }
 }

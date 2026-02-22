@@ -45,7 +45,7 @@ namespace GameBoard
         {
             if (!IsValidTransition(CurrentState, newState))
             {
-                Log.Warn($"Invalid state transition from {CurrentState} to {newState}");
+                //Log.Warn($"Invalid state transition from {CurrentState} to {newState}");
                 return;
             }
 

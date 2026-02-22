@@ -4,16 +4,12 @@ namespace GameBoard
 {
     public static class CursorPlaneConfig
     {
-        [Header("Camera Movement")]
-        public static float CameraFollowSpeed = 15f;
-        public static float CameraHeightOffset = 5f;
-        public static float CameraStopThreshold = 0.1f;
-        
-        [Header("Scroll Control")]
-        public static float ScrollSensitivity = 0.5f;
-        public static float ScrollThreshold = 0.01f;
-        
-        [Header("Layer Control")]
-        public static int DefaultStartLayer = -1; // -1 = middle
+        [Header("Scroll Control")] 
+        public const float ScrollSensitivity = 0.5f;
+        public const float ScrollThreshold = 0.01f;
+
+        [Header("Layer Control")] 
+        public const int DefaultStartLayer = -1;
+        public const float VerticalTransitionSpeed = 35f;
     }
 }

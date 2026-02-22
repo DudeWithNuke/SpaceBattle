@@ -1,3 +1,4 @@
+using CameraControls;
 using GameBoard;
 using PlaceableObject;
 using Reflex.Core;
@@ -9,6 +10,7 @@ public class GameInstaller : MonoBehaviour, IInstaller
     [SerializeField] private CursorPlane cursorPlane;
     [SerializeField] private ObjectSelection objectSelection;
     [SerializeField] private ObjectMoving objectMoving;
+    [SerializeField] private CameraController cameraController;
 
     public void InstallBindings(ContainerBuilder builder)
     {
@@ -16,5 +18,6 @@ public class GameInstaller : MonoBehaviour, IInstaller
         builder.RegisterValue(cursorPlane);
         builder.RegisterValue(objectSelection);
         builder.RegisterValue(objectMoving);
+        builder.RegisterValue(cameraController);
     }
 }

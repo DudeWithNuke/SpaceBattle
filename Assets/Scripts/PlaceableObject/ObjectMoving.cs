@@ -34,7 +34,7 @@ namespace PlaceableObject
             if (!_placeableObject || _placeableObject.State != PlaceableObjectState.Picked)
                 return;
             
-            if (_placeableObject.Shape == null)
+            if (!_placeableObject.Shape)
             {
                 Debug.LogError("Shape is null in PlaceableObject!");
                 return;

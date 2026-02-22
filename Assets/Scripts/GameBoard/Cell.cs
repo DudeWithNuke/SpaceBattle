@@ -84,7 +84,7 @@ namespace GameBoard
                     break;
             }
         }
-
+        
         public void SetSelected(bool isSelected)
         {
             _stateController.SetState(CellState.Selected);

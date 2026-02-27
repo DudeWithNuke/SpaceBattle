@@ -30,11 +30,11 @@ namespace GameBoard
         {
             return state switch
             {
-                CellState.DisabledLayer => Color.darkCyan,
-                CellState.ActiveLayer => Color.cyan,
+                CellState.DisabledLayer => Color.grey,
+                CellState.ActiveLayer => Color.gold,
                 CellState.Hovered => Color.greenYellow,
                 CellState.Selected => Color.green,
-                CellState.HoveredSelected => Color.gold,
+                CellState.HoveredSelected => Color.maroon,
                 CellState.EmptyAttacked => Color.darkMagenta,
                 CellState.ShipAttacked => Color.red,
                 _ => Color.grey
@@ -51,6 +51,7 @@ namespace GameBoard
 
             PreviousState = CurrentState;
             CurrentState = newState;
+            
             if (_renderer && _renderer.material)
                 _renderer.material.color = GetColor(newState);
         }
@@ -64,13 +65,18 @@ namespace GameBoard
             {
                 (CellState.DisabledLayer, CellState.ActiveLayer) => true,
                 (CellState.DisabledLayer, CellState.Hovered) => true,
+                (CellState.DisabledLayer, CellState.Selected) => true,
                 (CellState.ActiveLayer, CellState.DisabledLayer) => true,
                 (CellState.ActiveLayer, CellState.Hovered) => true,
+                (CellState.ActiveLayer, CellState.Selected) => true,
                 (CellState.Hovered, CellState.ActiveLayer) => true,
                 (CellState.Hovered, CellState.DisabledLayer) => true,
                 (CellState.Hovered, CellState.Selected) => true,
+                (CellState.Selected, CellState.ActiveLayer) => true,
+                (CellState.Selected, CellState.DisabledLayer) => true,
                 (CellState.Selected, CellState.HoveredSelected) => true,
                 (CellState.HoveredSelected, CellState.Selected) => true,
+                (CellState.HoveredSelected, CellState.Hovered) => true,
                 _ => false
             };
         }

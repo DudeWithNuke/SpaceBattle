@@ -6,12 +6,11 @@ namespace GameBoard
     public class Cell : MonoBehaviour
     {
         private Renderer _cellRenderer;
-        private Vector3Int _position;
         private CellStateController _stateController;
-        
-        public bool IsPlayerCell { get; set; }
 
-        public Vector3Int Position => _position;
+        public Vector3Int Position { get; private set; }
+        public bool IsPlayerCell { get; private set; }
+        public bool IsSelected => _stateController.CurrentState is CellState.Selected or CellState.HoveredSelected;
 
         private void Awake()
         {
@@ -19,16 +18,16 @@ namespace GameBoard
             _stateController = new CellStateController(_cellRenderer);
         }
 
-        public void Initialize(Vector3Int position, bool isPlayerCell)
+        public void Initialize(Vector3Int initPosition, bool initIsPlayerCell)
         {
-            _position = position;
-            gameObject.layer = _position.y;
-            
-            IsPlayerCell = isPlayerCell;
-            gameObject.name = $" {(IsPlayerCell ? "Player" : "Enemy")} " +
-                              $"X: {_position.x}, " +
-                              $"Y: {_position.y}, " +
-                              $"Z: {_position.z}";
+            Position = initPosition;
+            gameObject.layer = Position.y;
+
+            IsPlayerCell = initIsPlayerCell;
+            gameObject.name = $" {(initIsPlayerCell ? "Player" : "Enemy")} " +
+                              $"X: {Position.x}, " +
+                              $"Y: {Position.y}, " +
+                              $"Z: {Position.z}";
         }
 
         public void DestroySelf()
@@ -84,10 +83,15 @@ namespace GameBoard
                     break;
             }
         }
-        
+
         public void SetSelected(bool isSelected)
         {
-            _stateController.SetState(CellState.Selected);
+            if (isSelected)
+                _stateController.SetState(CellState.Selected);
+            else if (_stateController.CurrentState == CellState.HoveredSelected)
+                _stateController.SetState(CellState.Hovered);
+            else
+                _stateController.RestorePreviousState();
         }
     }
 }

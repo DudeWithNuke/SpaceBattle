@@ -1,5 +1,6 @@
 using GameBoard;
 using InputController;
+using System;
 using PlayerCamera.Movement;
 using Reflex.Attributes;
 using UnityEngine;
@@ -8,6 +9,8 @@ namespace PlayerCamera
 {
     public class CameraMovement : MonoBehaviour
     {
+        public event Action<bool> OnBattlefieldSideChanged;
+
         [Header("Movement Settings")]
         [SerializeField] private CameraSettings cameraSettings;
 
@@ -21,6 +24,9 @@ namespace PlayerCamera
         private FocusPan _focusPan;
         private Zoom _zoom;
         private CameraState _cameraState;
+        private bool _lastNotifiedPlayerField;
+
+        public bool IsPlayerBattlefieldActive => _cameraState == null || _cameraState.IsPlayerBattlefieldActive;
 
         private void Start()
         {
@@ -34,6 +40,8 @@ namespace PlayerCamera
             _cameraState = new CameraState();
             _cameraState.FocusPoint = GetBattlefieldCenter(_cameraState.IsPlayerBattlefieldActive);
             _cameraState.FocusPoint = ClampToGridBounds(_cameraState.FocusPoint);
+            _lastNotifiedPlayerField = _cameraState.IsPlayerBattlefieldActive;
+            OnBattlefieldSideChanged?.Invoke(_lastNotifiedPlayerField);
 
             UpdateCameraPosition();
         }
@@ -42,8 +50,10 @@ namespace PlayerCamera
         {
             if (inputFrame.SwitchBattlefieldRequested)
             {
+                ReturnPickedObjectToMenuIfAny();
                 Orbiting.StopOrbit(_cameraState);
                 _switch.StartSwitch(_cameraState, ClampToGridBounds);
+                NotifyBattlefieldSideChangeIfNeeded();
             }
 
             if (_cameraState.IsSwitching)
@@ -56,6 +66,22 @@ namespace PlayerCamera
             }
 
             UpdateCameraPosition();
+        }
+
+        private static void ReturnPickedObjectToMenuIfAny()
+        {
+            var pickedObject = PlaceableObject.PlaceableObject.CurrentPickedObject;
+            if (pickedObject)
+                Destroy(pickedObject.gameObject);
+        }
+
+        private void NotifyBattlefieldSideChangeIfNeeded()
+        {
+            if (_cameraState.IsPlayerBattlefieldActive == _lastNotifiedPlayerField)
+                return;
+
+            _lastNotifiedPlayerField = _cameraState.IsPlayerBattlefieldActive;
+            OnBattlefieldSideChanged?.Invoke(_lastNotifiedPlayerField);
         }
 
         private Vector3 GetBattlefieldCenter(bool playerField)

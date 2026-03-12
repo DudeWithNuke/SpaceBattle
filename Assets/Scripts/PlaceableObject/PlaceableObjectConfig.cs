@@ -7,6 +7,11 @@ namespace PlaceableObject
         [Header("Movement")]
         public static float MoveSpeed = 50f;
         public static float PositionThreshold = 0.01f;
+        public static float AdditionalMovementRange = 40f;
+
+        [Header("Visual")]
+        public static Color DefaultColor = Color.white;
+        public static Color InvalidPlacementColor = Color.red;
         
         [Header("Coordinate Conversion")]
         public static float CellCenterOffset = 0.5f;

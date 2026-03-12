@@ -1,10 +1,9 @@
-using UnityEngine;
-
 namespace PlaceableObject
 {
-    public class Ship : PlaceableObject
+    public class Ability : PlaceableObject
     {
-        protected override PlaceableObjectDeploymentSide DeploymentSide => PlaceableObjectDeploymentSide.OwnField;
+        protected override PlaceableObjectDeploymentSide DeploymentSide => PlaceableObjectDeploymentSide.EnemyField;
+        protected override bool UsesCellOccupancy => false;
 
         protected override void DefineShape(PlaceableObjectShape shape)
         {

@@ -10,8 +10,8 @@ namespace InputController
 
         private void Update()
         {
-            var scroll = Input.GetAxis("Mouse ScrollWheel") * CursorPlaneConfig.ScrollSensitivity;
-            if (Mathf.Abs(scroll) <= CursorPlaneConfig.ScrollThreshold)
+            var scroll = Input.GetAxis("Mouse ScrollWheel") * CursorPlane.ScrollSensitivity;
+            if (Mathf.Abs(scroll) <= CursorPlane.ScrollThreshold)
                 return;
 
             if (scroll > 0f)

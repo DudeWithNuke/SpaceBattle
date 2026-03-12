@@ -5,7 +5,9 @@ namespace GameBoard
 {
     public class CursorPlane : MonoBehaviour
     {
-        [Inject] private CellGrid _cellGrid;
+        public const float ScrollSensitivity = 0.5f;
+        public const float ScrollThreshold = 0.01f;
+        public const float VerticalTransitionSpeed = 35f;
 
         public Plane Plane { get; private set; }
         public bool IsTransitioning { get; private set; }
@@ -13,6 +15,8 @@ namespace GameBoard
         private int _layersCount;
         public int currentLayer;
         private float _slideAnimationTargetY;
+        
+        [Inject] private CellGrid _cellGrid;
 
         private void Start()
         {
@@ -69,7 +73,7 @@ namespace GameBoard
         private void UpdateVerticalTransition()
         {
             var currentPos = gameObject.transform.position;
-            var nextY = Mathf.MoveTowards(currentPos.y, _slideAnimationTargetY, CursorPlaneConfig.VerticalTransitionSpeed * Time.deltaTime);
+            var nextY = Mathf.MoveTowards(currentPos.y, _slideAnimationTargetY, VerticalTransitionSpeed * Time.deltaTime);
             gameObject.transform.position = GetActualPosition(nextY);
 
             IsTransitioning = !Mathf.Approximately(nextY, _slideAnimationTargetY);

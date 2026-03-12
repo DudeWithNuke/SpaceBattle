@@ -5,9 +5,14 @@ using UnityEngine;
 
 namespace PlaceableObject
 {
+    public enum PlaceableObjectDeploymentSide
+    {
+        OwnField,
+        EnemyField
+    }
+
     public abstract class PlaceableObject : MonoBehaviour
     {
-        private const float MaxPickedDistanceFromCursorPlaneCenter = 40f;
         private static PlaceableObject _currentlyPickedObject;
 
         public event Action<PlaceableObject> OnPlaced;
@@ -21,6 +26,9 @@ namespace PlaceableObject
         public Vector3Int CurrentPosition { get; set; }
         public bool IsPlayerObject { get; set; }
         public static PlaceableObject CurrentPickedObject => _currentlyPickedObject;
+        public PlaceableObjectDeploymentSide AllowedDeploymentSide => DeploymentSide;
+        protected abstract PlaceableObjectDeploymentSide DeploymentSide { get; }
+        protected virtual bool UsesCellOccupancy => true;
 
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;
@@ -32,11 +40,13 @@ namespace PlaceableObject
         private bool _isCurrentlyMoving;
 
         private Vector3 _targetWorldPosition;
+        private PlaceableObjectColorController _colorController;
 
         private void Awake()
         {
             Shape = ScriptableObject.CreateInstance<PlaceableObjectShape>();
             DefineShape(Shape);
+            _colorController = new PlaceableObjectColorController(GetComponentsInChildren<Renderer>());
         }
 
         private void Start()
@@ -46,11 +56,9 @@ namespace PlaceableObject
             _currentlyPickedObject = this;
             _isHoveringCells = false;
 
-            var startPos = transform.position;
-            var distanceToPlayer = Vector3.Distance(startPos, _cellGrid.PlayerOrigin);
-            var distanceToEnemy = Vector3.Distance(startPos, _cellGrid.EnemyOrigin);
-            IsPlayerObject = distanceToPlayer <= distanceToEnemy;
+            IsPlayerObject = DeploymentSide == PlaceableObjectDeploymentSide.OwnField;
 
+            var startPos = transform.position;
             CurrentPosition = WorldToCellPosition(startPos);
             _targetWorldPosition = CellToWorldPosition(CurrentPosition);
             _previousFramePosition = transform.position;
@@ -64,6 +72,7 @@ namespace PlaceableObject
 
             UpdatePosition();
             UpdateCellHover();
+            UpdatePlacementVisualState();
             UpdateMovingState();
         }
 
@@ -113,13 +122,17 @@ namespace PlaceableObject
 
         private Vector3 ClampWorldPositionToCursorPlaneRange(Vector3 worldPosition)
         {
-            var center = _cursorPlane.transform.position;
+            var origin = IsPlayerObject ? _cellGrid.PlayerOrigin : _cellGrid.EnemyOrigin;
+            var halfAdditionalRange = PlaceableObjectConfig.AdditionalMovementRange * 0.5f;
+            var minX = origin.x - halfAdditionalRange;
+            var maxX = origin.x + _cellGrid.GridSize.x + halfAdditionalRange;
+            var minZ = origin.z - halfAdditionalRange;
+            var maxZ = origin.z + _cellGrid.GridSize.z + halfAdditionalRange;
+
             return new Vector3(
-                Mathf.Clamp(worldPosition.x, center.x - MaxPickedDistanceFromCursorPlaneCenter,
-                    center.x + MaxPickedDistanceFromCursorPlaneCenter),
+                Mathf.Clamp(worldPosition.x, minX, maxX),
                 worldPosition.y,
-                Mathf.Clamp(worldPosition.z, center.z - MaxPickedDistanceFromCursorPlaneCenter,
-                    center.z + MaxPickedDistanceFromCursorPlaneCenter)
+                Mathf.Clamp(worldPosition.z, minZ, maxZ)
             );
         }
 
@@ -203,7 +216,8 @@ namespace PlaceableObject
                 _currentlyPickedObject = null;
 
             _placedOccupiedCells = occupiedCells;
-            _cellGrid.OccupyCells(occupiedCells, IsPlayerObject);
+            if (UsesCellOccupancy)
+                _cellGrid.OccupyCells(occupiedCells, IsPlayerObject);
 
             if (_previousOccupiedCells != null)
             {
@@ -215,13 +229,17 @@ namespace PlaceableObject
                 }
             }
 
-            foreach (var cellPos in occupiedCells)
+            if (UsesCellOccupancy)
             {
-                var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
-                if (cell)
-                    cell.SetSelected(true);
+                foreach (var cellPos in occupiedCells)
+                {
+                    var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
+                    if (cell)
+                        cell.SetSelected(true, cell.Position.y == _cursorPlane.currentLayer);
+                }
             }
 
+            _colorController.SetState(PlaceableObjectVisualState.Default);
             OnPlaced?.Invoke(this);
         }
 
@@ -276,18 +294,19 @@ namespace PlaceableObject
             State = PlaceableObjectState.Picked;
             _currentlyPickedObject = this;
 
-            if (_placedOccupiedCells != null)
+            if (UsesCellOccupancy && _placedOccupiedCells != null)
                 _cellGrid.ReleaseCells(_placedOccupiedCells, IsPlayerObject);
 
             var occupiedCells = _placedOccupiedCells ?? Shape.GetOccupiedCells(CurrentPosition);
             foreach (var cellPos in occupiedCells)
             {
                 var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
-                if (cell)
-                    cell.SetSelected(false);
+                if (cell && UsesCellOccupancy)
+                    cell.SetSelected(false, cell.Position.y == _cursorPlane.currentLayer);
             }
 
             _placedOccupiedCells = null;
+            UpdatePlacementVisualState();
             OnPicked?.Invoke(this);
         }
 
@@ -306,13 +325,14 @@ namespace PlaceableObject
             if (State == PlaceableObjectState.Placed)
             {
                 var occupiedCells = _placedOccupiedCells ?? Shape.GetOccupiedCells(CurrentPosition);
-                _cellGrid.ReleaseCells(occupiedCells, IsPlayerObject);
+                if (UsesCellOccupancy)
+                    _cellGrid.ReleaseCells(occupiedCells, IsPlayerObject);
 
                 foreach (var cellPos in occupiedCells)
                 {
                     var cell = _cellGrid.GetCell(cellPos, IsPlayerObject);
-                    if (cell != null)
-                        cell.SetSelected(false);
+                    if (cell != null && UsesCellOccupancy)
+                        cell.SetSelected(false, cell.Position.y == _cursorPlane.currentLayer);
                 }
             }
 
@@ -324,7 +344,19 @@ namespace PlaceableObject
 
         private bool CanBePlaced(Vector3Int[] occupiedCells)
         {
-            return IsWithinGridBounds() && _cellGrid.CanOccupyCells(occupiedCells, IsPlayerObject);
+            if (!IsWithinGridBounds())
+                return false;
+
+            return !UsesCellOccupancy || _cellGrid.CanOccupyCells(occupiedCells, IsPlayerObject);
+        }
+
+        private void UpdatePlacementVisualState()
+        {
+            var occupiedCells = Shape.GetOccupiedCells(CurrentPosition);
+            var canBePlaced = CanBePlaced(occupiedCells);
+            _colorController.SetState(canBePlaced
+                ? PlaceableObjectVisualState.Default
+                : PlaceableObjectVisualState.InvalidPlacement);
         }
 
         private void UpdateMovingState()

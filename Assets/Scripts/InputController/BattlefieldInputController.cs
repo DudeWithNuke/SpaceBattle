@@ -14,7 +14,18 @@ namespace InputController
 
         private void Update()
         {
+            HandleRemovePickedObject();
             HandleLeftClick();
+        }
+
+        private static void HandleRemovePickedObject()
+        {
+            if (!Input.GetKeyUp(KeyCode.X))
+                return;
+
+            var pickedObject = PlaceableObject.PlaceableObject.CurrentPickedObject;
+            if (pickedObject)
+                Destroy(pickedObject.gameObject);
         }
 
         private void HandleLeftClick()

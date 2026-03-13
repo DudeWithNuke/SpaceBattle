@@ -2,7 +2,10 @@ using GameBoard;
 using InputController;
 using System;
 using PlayerCamera.Movement;
+using PlaceableObject;
+using PlaceableObject.Manipulation;
 using Reflex.Attributes;
+using ScriptableObjects;
 using UnityEngine;
 
 namespace PlayerCamera
@@ -10,12 +13,12 @@ namespace PlayerCamera
     public class CameraMovement : MonoBehaviour
     {
         public event Action<bool> OnBattlefieldSideChanged;
-
-        [Header("Movement Settings")]
+        
         [SerializeField] private CameraSettings cameraSettings;
 
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;
+        [Inject] private ObjectSelection _objectSelection;
 
         private Transform _cameraTransform;
 
@@ -35,7 +38,7 @@ namespace PlayerCamera
             _orbiting = new Orbiting(cameraSettings);
             _focusPan = new FocusPan(cameraSettings);
             _zoom = new Zoom(cameraSettings);
-            _switch = new Switch(cameraSettings, _cellGrid.PlayerOrigin, _cellGrid.EnemyOrigin);
+            _switch = new Switch(cameraSettings, _cellGrid.OwnOrigin, _cellGrid.EnemyOrigin);
 
             _cameraState = new CameraState();
             _cameraState.FocusPoint = GetBattlefieldCenter(_cameraState.IsPlayerBattlefieldActive);
@@ -68,11 +71,12 @@ namespace PlayerCamera
             UpdateCameraPosition();
         }
 
-        private static void ReturnPickedObjectToMenuIfAny()
+        private void ReturnPickedObjectToMenuIfAny()
         {
-            var pickedObject = PlaceableObject.PlaceableObject.CurrentPickedObject;
-            if (pickedObject)
-                Destroy(pickedObject.gameObject);
+            if (_objectSelection == null)
+                return;
+
+            _objectSelection.DestroyCurrentPickedObject();
         }
 
         private void NotifyBattlefieldSideChangeIfNeeded()
@@ -87,7 +91,7 @@ namespace PlayerCamera
         private Vector3 GetBattlefieldCenter(bool playerField)
         {
             var gridSize = _cellGrid.GridSize;
-            var origin = playerField ? _cellGrid.PlayerOrigin : _cellGrid.EnemyOrigin;
+            var origin = playerField ? _cellGrid.OwnOrigin : _cellGrid.EnemyOrigin;
             return origin + new Vector3(gridSize.x / 2f, 0f, gridSize.z / 2f);
         }
 
@@ -110,7 +114,7 @@ namespace PlayerCamera
         {
             var gridSize = _cellGrid.GridSize;
             var origin = _cameraState.IsPlayerBattlefieldActive
-                ? _cellGrid.PlayerOrigin
+                ? _cellGrid.OwnOrigin
                 : _cellGrid.EnemyOrigin;
 
             var minX = origin.x + cameraSettings.boundaryMargin;

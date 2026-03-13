@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Utils;
 
 namespace GameBoard
 {
@@ -28,6 +29,7 @@ namespace GameBoard
                               $"X: {Position.x}, " +
                               $"Y: {Position.y}, " +
                               $"Z: {Position.z}";
+            Log.Info(_stateController.CurrentState.ToString());
         }
 
         public void DestroySelf()
@@ -96,7 +98,6 @@ namespace GameBoard
 
             if (_stateController.CurrentState == CellState.HoveredSelected)
                 _stateController.SetState(CellState.Selected);
-
             if (_stateController.CurrentState == CellState.Selected)
                 _stateController.SetState(targetState);
             else if (_stateController.CurrentState == CellState.Hovered)

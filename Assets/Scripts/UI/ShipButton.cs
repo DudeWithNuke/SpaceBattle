@@ -29,6 +29,8 @@ namespace UI
         [SerializeField] private Transform actionButtonsRoot;
         [SerializeField] private Button actionButtonPrefab;
         [SerializeField] private Button primaryActionButton;
+        [SerializeField] private UnitCardStatsBars statsBars;
+        [SerializeField] private UnitCardVitalityBars vitalityBars;
 
         public void Initialize(PlaceableObject.PlaceableObject prefab)
         {
@@ -36,6 +38,10 @@ namespace UI
             _button = primaryActionButton != null ? primaryActionButton : GetComponent<Button>();
             _label = GetComponentInChildren<TMP_Text>(true);
             _uiProfile = _placeableObjectPrefab ? _placeableObjectPrefab.GetComponent<PlaceableObjectUiProfile>() : null;
+            if (statsBars == null)
+                statsBars = GetComponent<UnitCardStatsBars>();
+            if (vitalityBars == null)
+                vitalityBars = GetComponent<UnitCardVitalityBars>();
 
             name = _placeableObjectPrefab.name + " Button";
             if (_label != null)
@@ -43,6 +49,8 @@ namespace UI
 
             SetupIcon();
             SetupStats();
+            SetupStatsBars();
+            SetupVitalityBars();
             BuildActionButtons();
 
             _button.onClick.AddListener(HandleClick);
@@ -107,6 +115,24 @@ namespace UI
             }
 
             statsLabel.text = builder.ToString();
+        }
+
+        private void SetupStatsBars()
+        {
+            if (statsBars == null)
+                return;
+
+            if (_placeableObjectPrefab is Ship ship)
+                statsBars.SetFromShip(ship);
+        }
+
+        private void SetupVitalityBars()
+        {
+            if (vitalityBars == null)
+                return;
+
+            if (_placeableObjectPrefab is Ship ship)
+                vitalityBars.SetFromShip(ship);
         }
 
         private void BuildActionButtons()

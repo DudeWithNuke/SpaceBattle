@@ -7,7 +7,7 @@ namespace GameBoard
     {
         [SerializeField] private Cell prefab;
 
-        [field: SerializeField] public Vector3 PlayerOrigin { get; set; }
+        [field: SerializeField] public Vector3 OwnOrigin { get; set; }
         [field: SerializeField] public Vector3 EnemyOrigin { get; set; }
         [field: SerializeField] public Vector3Int GridSize { get; set; }
 
@@ -18,6 +18,8 @@ namespace GameBoard
         public List<Cell> EnemyCells { get; private set; }
         private Dictionary<Vector3Int, Cell> _enemyCellMap;
         private HashSet<Vector3Int> _enemyOccupiedCells;
+        
+        public List<Cell> Cells { get; private set; }
 
         private void Awake()
         {
@@ -27,17 +29,23 @@ namespace GameBoard
                 Mathf.Max(GridSize.z, 0)
             );
 
+            Clear(Cells);
+            Cells = new List<Cell>();
+
             Clear(PlayerCells);
             PlayerCells = new List<Cell>();
             _playerCellMap = new Dictionary<Vector3Int, Cell>();
             _playerOccupiedCells = new HashSet<Vector3Int>();
-            Create(PlayerCells, PlayerOrigin, true, _playerCellMap);
+            Create(PlayerCells, OwnOrigin, true, _playerCellMap);
 
             Clear(EnemyCells);
             EnemyCells = new List<Cell>();
             _enemyCellMap = new Dictionary<Vector3Int, Cell>();
             _enemyOccupiedCells = new HashSet<Vector3Int>();
             Create(EnemyCells, EnemyOrigin, false, _enemyCellMap);
+
+            Cells.AddRange(PlayerCells);
+            Cells.AddRange(EnemyCells);
         }
 
         private void Create(List<Cell> cells, Vector3 origin, bool isPlayerCell, Dictionary<Vector3Int, Cell> cellMap)

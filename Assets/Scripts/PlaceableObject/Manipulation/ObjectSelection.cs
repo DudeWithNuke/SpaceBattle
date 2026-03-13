@@ -1,28 +1,33 @@
 using System;
 using System.Collections.Generic;
+using GameBoard;
 using PlayerCamera;
 using Reflex.Attributes;
 using UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-namespace PlaceableObject
+namespace PlaceableObject.Manipulation
 {
     public class ObjectSelection : MonoBehaviour
     {
         public event Action<PlaceableObject> OnStateChanged;
 
-        [SerializeField] public List<PlaceableObject> placeableObjects;
         [SerializeField] public Transform buttonPanel;
         [SerializeField] public ShipButton buttonPrefab;
 
+        [Inject] private ShipRoster _shipRoster;
         [Inject] private CameraMovement _cameraMovement;
+        [Inject] private ObjectMoving _objectMoving;
+        [Inject] private CursorPlane _cursorPlane;
 
+        public PlaceableObject CurrentPickedObject { get; private set; }
         private PlaceableObject _currentSelectedPlaceableObject;
+
         private readonly List<ShipButton> _shipButtons = new();
         private readonly Dictionary<PlaceableObject, ShipButton> _objectToButton = new();
         private readonly List<ButtonBinding> _buttonBindings = new();
-
+        
         private readonly struct ButtonBinding
         {
             public readonly PlaceableObject Prefab;
@@ -46,10 +51,7 @@ namespace PlaceableObject
                 _cameraMovement.OnBattlefieldSideChanged += HandleBattlefieldSideChanged;
                 RefreshButtonsForBattlefield(_cameraMovement.IsPlayerBattlefieldActive);
             }
-            else
-            {
-                RefreshButtonsForBattlefield(true);
-            }
+            else RefreshButtonsForBattlefield(true);
         }
 
         private void EnsureUiInteractionReady()
@@ -72,9 +74,7 @@ namespace PlaceableObject
             if (Mathf.Approximately(scale.x, 0f) &&
                 Mathf.Approximately(scale.y, 0f) &&
                 Mathf.Approximately(scale.z, 0f))
-            {
                 canvas.transform.localScale = Vector3.one;
-            }
         }
 
         private void OnDestroy()
@@ -108,6 +108,7 @@ namespace PlaceableObject
         private void OnPicked(PlaceableObject placeableObject)
         {
             _currentSelectedPlaceableObject = placeableObject;
+            CurrentPickedObject = placeableObject;
             DisableAllButtonsExcept(placeableObject);
             OnStateChanged?.Invoke(placeableObject);
         }
@@ -116,6 +117,9 @@ namespace PlaceableObject
         {
             if (_currentSelectedPlaceableObject == placeableObject)
                 _currentSelectedPlaceableObject = null;
+
+            if (CurrentPickedObject == placeableObject)
+                CurrentPickedObject = null;
 
             EnableAllButtons();
             OnStateChanged?.Invoke(null);
@@ -135,6 +139,9 @@ namespace PlaceableObject
                 EnableAllButtons();
                 OnStateChanged?.Invoke(null);
             }
+
+            if (CurrentPickedObject == placeableObject)
+                CurrentPickedObject = null;
         }
 
         private void DisableAllButtonsExcept(PlaceableObject placeableObject)
@@ -154,8 +161,14 @@ namespace PlaceableObject
 
         private void CreateButtons()
         {
-            foreach (var placeableObject in placeableObjects)
+            if (_shipRoster == null)
+                return;
+
+            foreach (var placeableObject in _shipRoster.GetAll())
             {
+                if (!placeableObject)
+                    continue;
+
                 var shipButton = Instantiate(buttonPrefab, buttonPanel);
                 shipButton.Initialize(placeableObject);
                 _shipButtons.Add(shipButton);
@@ -189,6 +202,62 @@ namespace PlaceableObject
             return isPlayerBattlefieldActive
                 ? placeableObject.AllowedDeploymentSide == PlaceableObjectDeploymentSide.OwnField
                 : placeableObject.AllowedDeploymentSide == PlaceableObjectDeploymentSide.EnemyField;
+        }
+
+        public bool TryPlaceCurrent()
+        {
+            if (!CurrentPickedObject)
+                return false;
+            if (_cursorPlane.IsTransitioning)
+                return false;
+            if (_objectMoving.IsMoving)
+                return false;
+            if (!_objectMoving.IsAtTargetPosition())
+                return false;
+            if (!_objectMoving.HasValidTarget)
+                return false;
+            
+            return CurrentPickedObject.TryPlace();
+        }
+        
+        private readonly RaycastHit[] _raycastResults = new RaycastHit[16];
+        public bool TryPickClosest(Ray ray)
+        {
+            if (CurrentPickedObject)
+                return false;
+
+            var hitCount = Physics.RaycastNonAlloc(ray, _raycastResults, Mathf.Infinity);
+            if (hitCount == 0)
+                return false;
+
+            PlaceableObject closestObject = null;
+            var closestDistance = float.PositiveInfinity;
+
+            for (var i = 0; i < hitCount; i++)
+            {
+                var hit = _raycastResults[i];
+
+                if (hit.distance >= closestDistance)
+                    continue;
+                if (!hit.collider.TryGetComponent(out PlaceableObject placeableObject)) 
+                    continue;
+                if (placeableObject.State != PlaceableObjectState.Placed) 
+                    continue;
+                closestDistance = hit.distance;
+                closestObject = placeableObject;
+            }
+
+            return closestObject && closestObject.TryPick();
+        }
+
+        public bool DestroyCurrentPickedObject()
+        {
+            if (!CurrentPickedObject)
+                return false;
+
+            Destroy(CurrentPickedObject.gameObject);
+            CurrentPickedObject = null;
+            return true;
         }
     }
 }

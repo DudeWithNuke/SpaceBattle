@@ -1024,6 +1024,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02d31ff53c2b4b2daa9da88a831b3430, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  placeableObjectSettings: {fileID: 11400000, guid: 94ea9b9113843c0428a6044196bfa487, type: 2}
 --- !u!1 &1629808313
 GameObject:
   m_ObjectHideFlags: 0
@@ -1054,7 +1055,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 658783722452520885, guid: 4a7ad02c8bd6a59498b58c954fd963cb, type: 3}
-  <PlayerOrigin>k__BackingField: {x: 50, y: 0, z: 0}
+  <OwnOrigin>k__BackingField: {x: 0, y: 0, z: 0}
   <EnemyOrigin>k__BackingField: {x: -50, y: 0, z: 0}
   <GridSize>k__BackingField: {x: 10, y: 10, z: 10}
 --- !u!4 &1629808315

@@ -1,3 +1,6 @@
+using System;
+using System.Linq;
+using NUnit.Framework;
 using UnityEngine;
 using Reflex.Attributes;
 
@@ -7,7 +10,7 @@ namespace GameBoard
     {
         public const float ScrollSensitivity = 0.5f;
         public const float ScrollThreshold = 0.01f;
-        public const float VerticalTransitionSpeed = 35f;
+        private const float VerticalTransitionSpeed = 35f;
 
         public Plane Plane { get; private set; }
         public bool IsTransitioning { get; private set; }
@@ -17,7 +20,7 @@ namespace GameBoard
         private float _slideAnimationTargetY;
         
         [Inject] private CellGrid _cellGrid;
-
+        
         private void Start()
         {
             _layersCount = _cellGrid.GridSize.y;
@@ -85,7 +88,7 @@ namespace GameBoard
 
         private void RefreshLayerState()
         {
-            SetLayerActive(currentLayer, true, true);
+            SetLayerActive(currentLayer, true);
         }
 
         private static Vector3 GetActualPosition(float y)
@@ -93,14 +96,10 @@ namespace GameBoard
             return new Vector3(0, y, 0);
         }
 
-        private void SetLayerActive(int layerIndex, bool isPlayerCell, bool isActive)
+        private void SetLayerActive(int layerIndex, bool isActive)
         {
-            var cells = isPlayerCell ? _cellGrid.PlayerCells : _cellGrid.EnemyCells;
-            foreach (var cell in cells)
+            foreach (var cell in _cellGrid.Cells.Where(cell => !cell.IsSelected))
             {
-                if (cell.IsSelected)
-                    continue;
-
                 if (cell.Position.y == layerIndex && isActive)
                     cell.ActivateLayer();
                 else

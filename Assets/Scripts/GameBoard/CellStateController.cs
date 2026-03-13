@@ -24,6 +24,7 @@ namespace GameBoard
         {
             _renderer = renderer;
             CurrentState = CellState.DisabledLayer;
+            ApplyColor(CurrentState);
         }
 
         private static Color GetColor(CellState state)
@@ -41,25 +42,24 @@ namespace GameBoard
             };
         }
 
+        // ReSharper disable Unity.PerformanceAnalysis
         public void SetState(CellState newState)
         {
             if (!IsValidTransition(CurrentState, newState))
             {
-                //Log.Warn($"Invalid state transition from {CurrentState} to {newState}");
+                Log.Warn($"Invalid state transition from {CurrentState} to {newState}");
                 return;
             }
 
             PreviousState = CurrentState;
             CurrentState = newState;
-            
-            if (_renderer && _renderer.material)
-                _renderer.material.color = GetColor(newState);
+            ApplyColor(CurrentState);
         }
 
         private static bool IsValidTransition(CellState from, CellState to)
         {
             if (from == to) 
-                return false;
+                    return false;
 
             return (from, to) switch
             {
@@ -84,6 +84,12 @@ namespace GameBoard
         public void RestorePreviousState()
         {
             SetState(PreviousState);
+        }
+
+        private void ApplyColor(CellState state)
+        {
+            if (_renderer && _renderer.material)
+                _renderer.material.color = GetColor(state);
         }
     }
 }

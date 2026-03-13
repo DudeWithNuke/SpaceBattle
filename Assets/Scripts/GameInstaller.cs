@@ -1,6 +1,7 @@
 using GameBoard;
 using InputController;
 using PlaceableObject;
+using PlaceableObject.Manipulation;
 using PlayerCamera;
 using Reflex.Core;
 using UnityEngine;
@@ -11,6 +12,7 @@ public class GameInstaller : MonoBehaviour, IInstaller
     [SerializeField] private CursorPlane cursorPlane;
     [SerializeField] private ObjectSelection objectSelection;
     [SerializeField] private ObjectMoving objectMoving;
+    [SerializeField] private ShipRoster shipRoster;
     [SerializeField] private CameraMovement cameraMovement;
     [SerializeField] private CameraInputController cameraInputController;
     [SerializeField] private BattlefieldInputController battlefieldInputController;
@@ -22,7 +24,7 @@ public class GameInstaller : MonoBehaviour, IInstaller
         builder.RegisterValue(cursorPlane);
         builder.RegisterValue(objectSelection);
         builder.RegisterValue(objectMoving);
-        
+        builder.RegisterValue(shipRoster);
         builder.RegisterValue(cameraMovement);
         builder.RegisterValue(cameraInputController);
         builder.RegisterValue(battlefieldInputController);

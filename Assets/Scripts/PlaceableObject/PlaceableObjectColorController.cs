@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ScriptableObjects;
 using UnityEngine;
 
 namespace PlaceableObject
@@ -15,7 +16,7 @@ namespace PlaceableObject
         private readonly Dictionary<PlaceableObjectVisualState, Color> _palette;
         private PlaceableObjectVisualState _currentState;
 
-        public PlaceableObjectColorController(Renderer[] renderers)
+        public PlaceableObjectColorController(Renderer[] renderers, PlaceableObjectSettings settings)
         {
             var materials = new List<Material>();
             foreach (var renderer in renderers)
@@ -25,17 +26,15 @@ namespace PlaceableObject
 
                 var rendererMaterials = renderer.materials;
                 foreach (var material in rendererMaterials)
-                {
                     if (material)
                         materials.Add(material);
-                }
             }
 
             _materials = materials.ToArray();
             _palette = new Dictionary<PlaceableObjectVisualState, Color>
             {
-                { PlaceableObjectVisualState.Default, PlaceableObjectConfig.DefaultColor },
-                { PlaceableObjectVisualState.InvalidPlacement, PlaceableObjectConfig.InvalidPlacementColor }
+                { PlaceableObjectVisualState.Default, settings ? settings.defaultColor : Color.white },
+                { PlaceableObjectVisualState.InvalidPlacement, settings ? settings.invalidPlacementColor : Color.red }
             };
 
             _currentState = PlaceableObjectVisualState.Default;

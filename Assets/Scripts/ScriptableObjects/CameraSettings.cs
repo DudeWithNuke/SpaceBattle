@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace PlayerCamera
+namespace ScriptableObjects
 {
     [CreateAssetMenu(fileName = "CameraSettings", menuName = "Settings/Camera Settings")]
     public sealed class CameraSettings : ScriptableObject

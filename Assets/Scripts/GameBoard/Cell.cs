@@ -98,11 +98,9 @@ namespace GameBoard
 
             if (_stateController.CurrentState == CellState.HoveredSelected)
                 _stateController.SetState(CellState.Selected);
-            if (_stateController.CurrentState == CellState.Selected)
-                _stateController.SetState(targetState);
-            else if (_stateController.CurrentState == CellState.Hovered)
-                _stateController.SetState(targetState);
-            else if (_stateController.CurrentState != targetState)
+            if (_stateController.CurrentState == CellState.Selected || 
+                _stateController.CurrentState == CellState.Hovered || 
+                _stateController.CurrentState != targetState)
                 _stateController.SetState(targetState);
         }
     }

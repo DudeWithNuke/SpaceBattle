@@ -81,23 +81,18 @@ namespace PlaceableObject
                 placeableObjectSettings != null ? placeableObjectSettings.coordinateRoundingOffset : 0.5f);
         }
 
-        private void Place()
+        public bool TryPlace()
         {
+            if (State != PlaceableObjectState.Placing)
+                return false;
+            
             if (!_gridInteraction.CanPlace(CurrentPosition))
-                return;
+                return false;
 
             State = PlaceableObjectState.Placed;
             _gridInteraction.ApplyPlacement(CurrentPosition);
             _colorController?.SetState(PlaceableObjectVisualState.Default);
             OnPlaced?.Invoke(this);
-        }
-
-        public bool TryPlace()
-        {
-            if (State != PlaceableObjectState.Placing)
-                return false;
-
-            Place();
             return true;
         }
 
@@ -106,16 +101,11 @@ namespace PlaceableObject
             if (State != PlaceableObjectState.Placed)
                 return false;
 
-            Pick();
-            return true;
-        }
-
-        private void Pick()
-        {
             State = PlaceableObjectState.Picked;
             _gridInteraction.ApplyPick(CurrentPosition);
             UpdatePlacementVisualState();
             OnPicked?.Invoke(this);
+            return true;
         }
 
         private void OnDestroy()

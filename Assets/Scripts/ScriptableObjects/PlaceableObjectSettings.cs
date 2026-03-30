@@ -5,10 +5,15 @@ namespace ScriptableObjects
     [CreateAssetMenu(fileName = "PlaceableObjectSettings", menuName = "Settings/Placeable Object Settings")]
     public sealed class PlaceableObjectSettings : ScriptableObject
     {
-        [Header("Movement")]
-        public float moveSpeed = 50f;
+        [Header("Dynamic Movement")]
         public float positionThreshold = 0.01f;
         public float additionalMovementRange = 40f;
+        public float moveSpeed = 50f;
+        public float dynamicSpeedSmoothing = 12f;
+        public float minDynamicSpeedFactor = 0.05f;
+        public float maxDynamicSpeedFactor = 2.5f;
+        public float cursorSpeedForMaxFactor = 20f;
+        public float catchUpDistanceForMaxFactor = 3f;
 
         [Header("Visual")]
         public Color defaultColor = Color.white;

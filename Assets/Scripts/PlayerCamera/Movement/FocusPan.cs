@@ -21,11 +21,11 @@ namespace PlayerCamera.Movement
                 moveDirection += forward;
             if (moveInput.y < 0f)
                 moveDirection -= forward;
-            if (moveInput.x < 0f)
-                moveDirection -= right;
             if (moveInput.x > 0f)
                 moveDirection += right;
-            
+            if (moveInput.x < 0f)
+                moveDirection -= right;
+
             if (moveDirection == Vector3.zero)
                 return;
 

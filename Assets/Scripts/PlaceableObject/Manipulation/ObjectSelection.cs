@@ -1,89 +1,44 @@
 using System;
 using System.Collections.Generic;
 using GameBoard;
-using PlayerCamera;
-using Reflex.Attributes;
 using UI;
 using UnityEngine;
-using UnityEngine.EventSystems;
+using Reflex.Attributes;
 
 namespace PlaceableObject.Manipulation
 {
+    [RequireComponent(typeof(PlaceableObjectButtonsController))]
+    [RequireComponent(typeof(PlaceableObjectPicker))]
     public class ObjectSelection : MonoBehaviour
     {
         public event Action<PlaceableObject> OnStateChanged;
 
-        [SerializeField] public Transform buttonPanel;
-        [SerializeField] public ShipButton buttonPrefab;
+        [SerializeField] private Transform buttonPanel;
+        [SerializeField] private ShipButton buttonPrefab;
 
-        [Inject] private ShipRoster _shipRoster;
-        [Inject] private CameraMovement _cameraMovement;
         [Inject] private ObjectMoving _objectMoving;
         [Inject] private CursorPlane _cursorPlane;
 
         public PlaceableObject CurrentPickedObject { get; private set; }
-        private PlaceableObject _currentSelectedPlaceableObject;
-
-        private readonly List<ShipButton> _shipButtons = new();
-        private readonly Dictionary<PlaceableObject, ShipButton> _objectToButton = new();
-        private readonly List<ButtonBinding> _buttonBindings = new();
-        
-        private readonly struct ButtonBinding
-        {
-            public readonly PlaceableObject Prefab;
-            public readonly ShipButton Button;
-
-            public ButtonBinding(PlaceableObject prefab, ShipButton button)
-            {
-                Prefab = prefab;
-                Button = button;
-            }
-        }
+        private readonly HashSet<PlaceableObject> _trackedObjects = new();
+        private PlaceableObjectButtonsController _buttonsController;
+        private PlaceableObjectPicker _picker;
 
         private void Awake()
         {
-            EnsureUiInteractionReady();
-            CreateButtons();
-            ShipButton.OnObjectSpawned += OnObjectSpawned;
+            _buttonsController = GetComponent<PlaceableObjectButtonsController>();
+            _picker = GetComponent<PlaceableObjectPicker>();
 
-            if (_cameraMovement != null)
-            {
-                _cameraMovement.OnBattlefieldSideChanged += HandleBattlefieldSideChanged;
-                RefreshButtonsForBattlefield(_cameraMovement.IsPlayerBattlefieldActive);
-            }
-            else RefreshButtonsForBattlefield(true);
-        }
-
-        private void EnsureUiInteractionReady()
-        {
-            if (FindFirstObjectByType<EventSystem>() == null)
-            {
-                var eventSystemObject = new GameObject("EventSystem");
-                eventSystemObject.AddComponent<EventSystem>();
-                eventSystemObject.AddComponent<StandaloneInputModule>();
-            }
-
-            if (buttonPanel == null)
-                return;
-
-            var canvas = buttonPanel.GetComponentInParent<Canvas>();
-            if (canvas == null)
-                return;
-
-            var scale = canvas.transform.localScale;
-            if (Mathf.Approximately(scale.x, 0f) &&
-                Mathf.Approximately(scale.y, 0f) &&
-                Mathf.Approximately(scale.z, 0f))
-                canvas.transform.localScale = Vector3.one;
+            _buttonsController.Initialize(buttonPanel, buttonPrefab);
+            _buttonsController.OnObjectSpawned += OnObjectSpawned;
         }
 
         private void OnDestroy()
         {
-            ShipButton.OnObjectSpawned -= OnObjectSpawned;
-            if (_cameraMovement != null)
-                _cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
+            if (_buttonsController != null)
+                _buttonsController.OnObjectSpawned -= OnObjectSpawned;
 
-            foreach (var placeableObject in _objectToButton.Keys)
+            foreach (var placeableObject in _trackedObjects)
             {
                 if (!placeableObject)
                     continue;
@@ -94,9 +49,9 @@ namespace PlaceableObject.Manipulation
             }
         }
 
-        private void OnObjectSpawned(ShipButton sourceButton, PlaceableObject placeableObject)
+        private void OnObjectSpawned(PlaceableObject placeableObject)
         {
-            _objectToButton[placeableObject] = sourceButton;
+            _trackedObjects.Add(placeableObject);
 
             placeableObject.OnPicked += OnPicked;
             placeableObject.OnPlaced += OnPlaced;
@@ -107,21 +62,17 @@ namespace PlaceableObject.Manipulation
 
         private void OnPicked(PlaceableObject placeableObject)
         {
-            _currentSelectedPlaceableObject = placeableObject;
             CurrentPickedObject = placeableObject;
-            DisableAllButtonsExcept(placeableObject);
+            _buttonsController.HandleObjectPicked(placeableObject);
             OnStateChanged?.Invoke(placeableObject);
         }
 
         private void OnPlaced(PlaceableObject placeableObject)
         {
-            if (_currentSelectedPlaceableObject == placeableObject)
-                _currentSelectedPlaceableObject = null;
-
             if (CurrentPickedObject == placeableObject)
                 CurrentPickedObject = null;
 
-            EnableAllButtons();
+            _buttonsController.HandleSelectionCleared();
             OnStateChanged?.Invoke(null);
         }
 
@@ -131,77 +82,15 @@ namespace PlaceableObject.Manipulation
             placeableObject.OnPlaced -= OnPlaced;
             placeableObject.OnDestroyed -= OnPlaceableObjectDestroyed;
 
-            _objectToButton.Remove(placeableObject);
-
-            if (_currentSelectedPlaceableObject == placeableObject)
-            {
-                _currentSelectedPlaceableObject = null;
-                EnableAllButtons();
-                OnStateChanged?.Invoke(null);
-            }
+            _trackedObjects.Remove(placeableObject);
+            _buttonsController.UnregisterSpawnedObject(placeableObject);
 
             if (CurrentPickedObject == placeableObject)
+            {
                 CurrentPickedObject = null;
-        }
-
-        private void DisableAllButtonsExcept(PlaceableObject placeableObject)
-        {
-            foreach (var shipButton in _shipButtons)
-                shipButton.DisableInteraction();
-
-            if (_objectToButton.TryGetValue(placeableObject, out var sourceButton))
-                sourceButton.DisableInteraction();
-        }
-
-        private void EnableAllButtons()
-        {
-            foreach (var shipButton in _shipButtons)
-                shipButton.EnableInteraction();
-        }
-
-        private void CreateButtons()
-        {
-            if (_shipRoster == null)
-                return;
-
-            foreach (var placeableObject in _shipRoster.GetAll())
-            {
-                if (!placeableObject)
-                    continue;
-
-                var shipButton = Instantiate(buttonPrefab, buttonPanel);
-                shipButton.Initialize(placeableObject);
-                _shipButtons.Add(shipButton);
-                _buttonBindings.Add(new ButtonBinding(placeableObject, shipButton));
+                _buttonsController.HandleSelectionCleared();
+                OnStateChanged?.Invoke(null);
             }
-        }
-
-        private void HandleBattlefieldSideChanged(bool isPlayerBattlefieldActive)
-        {
-            RefreshButtonsForBattlefield(isPlayerBattlefieldActive);
-        }
-
-        private void RefreshButtonsForBattlefield(bool isPlayerBattlefieldActive)
-        {
-            foreach (var binding in _buttonBindings)
-                binding.Button.gameObject.SetActive(IsPrefabAllowedForBattlefield(binding.Prefab, isPlayerBattlefieldActive));
-
-            if (_currentSelectedPlaceableObject &&
-                _objectToButton.TryGetValue(_currentSelectedPlaceableObject, out var sourceButton) &&
-                sourceButton.gameObject.activeSelf)
-            {
-                DisableAllButtonsExcept(_currentSelectedPlaceableObject);
-                return;
-            }
-
-            EnableAllButtons();
-        }
-
-        private static bool IsPrefabAllowedForBattlefield(PlaceableObject placeableObject, bool isPlayerBattlefieldActive)
-        {
-            return isPlayerBattlefieldActive
-                ? placeableObject.AllowedDeploymentSide == PlaceableObjectDeploymentSide.OwnField
-                : placeableObject.AllowedDeploymentSide == PlaceableObjectDeploymentSide.EnemyField;
         }
 
         public bool TryPlaceCurrent()
@@ -219,35 +108,13 @@ namespace PlaceableObject.Manipulation
             
             return CurrentPickedObject.TryPlace();
         }
-        
-        private readonly RaycastHit[] _raycastResults = new RaycastHit[16];
+
         public bool TryPickClosest(Ray ray)
         {
             if (CurrentPickedObject)
                 return false;
 
-            var hitCount = Physics.RaycastNonAlloc(ray, _raycastResults, Mathf.Infinity);
-            if (hitCount == 0)
-                return false;
-
-            PlaceableObject closestObject = null;
-            var closestDistance = float.PositiveInfinity;
-
-            for (var i = 0; i < hitCount; i++)
-            {
-                var hit = _raycastResults[i];
-
-                if (hit.distance >= closestDistance)
-                    continue;
-                if (!hit.collider.TryGetComponent(out PlaceableObject placeableObject)) 
-                    continue;
-                if (placeableObject.State != PlaceableObjectState.Placed) 
-                    continue;
-                closestDistance = hit.distance;
-                closestObject = placeableObject;
-            }
-
-            return closestObject && closestObject.TryPick();
+            return _picker != null && _picker.TryPickClosest(ray);
         }
 
         public bool DestroyCurrentPickedObject()

@@ -1,5 +1,5 @@
 using PlaceableObject;
-using PlaceableObject.Manipulation;
+using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using UnityEngine;
 
@@ -8,7 +8,7 @@ namespace InputController
     public class BattlefieldInputController : MonoBehaviour
     {
         private Camera _camera;
-        [Inject] private ObjectSelection _objectSelection;
+        [Inject] private Selection _selection;
 
         private void Start()
         {
@@ -26,8 +26,8 @@ namespace InputController
             if (!Input.GetKeyUp(KeyCode.X))
                 return;
 
-            if (_objectSelection)
-                _objectSelection.DestroyCurrentPickedObject();
+            if (_selection)
+                _selection.DestroyCurrentPickedObject();
         }
 
         private void HandleLeftClick()
@@ -35,17 +35,17 @@ namespace InputController
             if (!Input.GetMouseButtonUp(0))
                 return;
 
-            if (!_objectSelection)
+            if (!_selection)
                 return;
 
-            if (_objectSelection.CurrentPickedObject)
+            if (_selection.CurrentPickedObject)
             {
-                _objectSelection.TryPlaceCurrent();
+                _selection.TryPlaceCurrent();
                 return;
             }
 
             var ray = _camera.ScreenPointToRay(Input.mousePosition);
-            _objectSelection.TryPickClosest(ray);
+            _selection.TryPickClosest(ray);
         }
     }
 }

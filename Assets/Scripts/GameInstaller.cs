@@ -1,7 +1,6 @@
 using GameBoard;
 using InputController;
-using PlaceableObject;
-using PlaceableObject.Manipulation;
+using PlaceableObjectManipulation;
 using PlayerCamera;
 using Reflex.Core;
 using UnityEngine;
@@ -10,8 +9,11 @@ public class GameInstaller : MonoBehaviour, IInstaller
 {
     [SerializeField] private CellGrid cellGrid;
     [SerializeField] private CursorPlane cursorPlane;
-    [SerializeField] private ObjectSelection objectSelection;
-    [SerializeField] private ObjectMoving objectMoving;
+    [SerializeField] private Selection selection;
+    [SerializeField] private Moving moving;
+    [SerializeField] private StateCoordinator stateCoordinator = new();
+    [SerializeField] private Spawning spawning;
+    [SerializeField] private SpawnPositionResolver spawnPositionResolver = new();
     [SerializeField] private ShipRoster shipRoster;
     [SerializeField] private CameraMovement cameraMovement;
     [SerializeField] private CameraInputController cameraInputController;
@@ -22,8 +24,11 @@ public class GameInstaller : MonoBehaviour, IInstaller
     {
         builder.RegisterValue(cellGrid);
         builder.RegisterValue(cursorPlane);
-        builder.RegisterValue(objectSelection);
-        builder.RegisterValue(objectMoving);
+        builder.RegisterValue(selection);
+        builder.RegisterValue(moving);
+        builder.RegisterValue(stateCoordinator);
+        builder.RegisterValue(spawning);
+        builder.RegisterValue(spawnPositionResolver);
         builder.RegisterValue(shipRoster);
         builder.RegisterValue(cameraMovement);
         builder.RegisterValue(cameraInputController);

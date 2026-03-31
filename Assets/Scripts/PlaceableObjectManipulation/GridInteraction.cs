@@ -1,10 +1,11 @@
 using GameBoard;
+using PlaceableObject;
 using Reflex.Attributes;
 using UnityEngine;
 
-namespace PlaceableObject
+namespace PlaceableObjectManipulation
 {
-    public sealed class ObjectGridInteraction : MonoBehaviour
+    public sealed class GridInteraction : MonoBehaviour
     {
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;

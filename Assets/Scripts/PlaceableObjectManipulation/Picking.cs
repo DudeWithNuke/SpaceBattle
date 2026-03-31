@@ -1,10 +1,17 @@
+﻿using PlaceableObject;
 using UnityEngine;
 
-namespace PlaceableObject.Manipulation
+namespace PlaceableObjectManipulation
 {
-    public class PlaceableObjectPicker : MonoBehaviour
+    public class Picking
     {
+        private readonly StateCoordinator _stateCoordinator;
         private readonly RaycastHit[] _raycastResults = new RaycastHit[16];
+
+        public Picking(StateCoordinator stateCoordinator)
+        {
+            _stateCoordinator = stateCoordinator;
+        }
 
         public bool TryPickClosest(Ray ray)
         {
@@ -12,7 +19,7 @@ namespace PlaceableObject.Manipulation
             if (hitCount == 0)
                 return false;
 
-            PlaceableObject closestObject = null;
+            PlaceableObject.PlaceableObject closestObject = null;
             var closestDistance = float.PositiveInfinity;
 
             for (var i = 0; i < hitCount; i++)
@@ -20,7 +27,7 @@ namespace PlaceableObject.Manipulation
                 var hit = _raycastResults[i];
                 if (hit.distance >= closestDistance)
                     continue;
-                if (!hit.collider.TryGetComponent(out PlaceableObject placeableObject))
+                if (!hit.collider.TryGetComponent(out PlaceableObject.PlaceableObject placeableObject))
                     continue;
                 if (placeableObject.State != PlaceableObjectState.Placed)
                     continue;
@@ -29,7 +36,7 @@ namespace PlaceableObject.Manipulation
                 closestObject = placeableObject;
             }
 
-            return closestObject && closestObject.TryPick();
+            return _stateCoordinator != null && closestObject && _stateCoordinator.TryPick(closestObject);
         }
     }
 }

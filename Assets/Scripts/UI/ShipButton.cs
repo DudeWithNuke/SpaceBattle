@@ -1,10 +1,7 @@
-using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using GameBoard;
 using PlaceableObject;
-using Reflex.Extensions;
-using Reflex.Injectors;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,8 +10,9 @@ namespace UI
 {
     public class ShipButton : MonoBehaviour
     {
-        public static event Action<ShipButton, PlaceableObject.PlaceableObject> OnObjectSpawned;
-        public static event Action<ShipButton, PlaceableObject.PlaceableObject, string> OnActionRequested;
+        public event Action<ShipButton, PlaceableObject.PlaceableObject> OnSpawnRequested;
+        public event Action<ShipButton, PlaceableObject.PlaceableObject> OnPickRequested;
+        public event Action<ShipButton, PlaceableObject.PlaceableObject, string> OnActionRequested;
 
         private PlaceableObject.PlaceableObject _placeableObjectPrefab;
         private PlaceableObject.PlaceableObject _placeableObjectInstance;
@@ -31,6 +29,9 @@ namespace UI
         [SerializeField] private Button primaryActionButton;
         [SerializeField] private UnitCardStatsBars statsBars;
         [SerializeField] private UnitCardVitalityBars vitalityBars;
+
+        public PlaceableObject.PlaceableObject Prefab => _placeableObjectPrefab;
+        public PlaceableObject.PlaceableObject Instance => _placeableObjectInstance;
 
         public void Initialize(PlaceableObject.PlaceableObject prefab)
         {
@@ -55,6 +56,33 @@ namespace UI
 
             _button.onClick.AddListener(HandleClick);
             DisableKeyboard();
+            UpdateActionButtonsState();
+        }
+
+        public void BindInstance(PlaceableObject.PlaceableObject instance)
+        {
+            if (_placeableObjectInstance == instance)
+                return;
+
+            UnsubscribeFromInstance();
+            _placeableObjectInstance = instance;
+
+            if (_placeableObjectInstance)
+            {
+                _placeableObjectInstance.OnPlaced += HandlePlaced;
+                _placeableObjectInstance.OnPicked += HandlePicked;
+                _placeableObjectInstance.OnDestroyed += HandleDestroyed;
+                DisableInteraction();
+            }
+
+            UpdateActionButtonsState();
+        }
+
+        public void ReleaseInstance()
+        {
+            UnsubscribeFromInstance();
+            _placeableObjectInstance = null;
+            EnableInteraction();
             UpdateActionButtonsState();
         }
 
@@ -190,13 +218,13 @@ namespace UI
         {
             if (!_placeableObjectInstance)
             {
-                SpawnPrefab();
+                OnSpawnRequested?.Invoke(this, _placeableObjectPrefab);
                 return;
             }
 
             if (_placeableObjectInstance.State == PlaceableObjectState.Placed)
             {
-                _placeableObjectInstance.TryPick();
+                OnPickRequested?.Invoke(this, _placeableObjectInstance);
                 DisableInteraction();
             }
 
@@ -209,37 +237,6 @@ namespace UI
                 return;
 
             OnActionRequested?.Invoke(this, _placeableObjectInstance, actionId);
-        }
-
-        private void SpawnPrefab()
-        {
-            _placeableObjectInstance = Instantiate(_placeableObjectPrefab, GetSpawnPositionUnderCursor(), Quaternion.identity);
-            if (!_placeableObjectInstance)
-                return;
-
-            var sceneContainer = gameObject.scene.GetSceneContainer();
-            GameObjectInjector.InjectObject(_placeableObjectInstance.gameObject, sceneContainer);
-
-            _placeableObjectInstance.OnPlaced += HandlePlaced;
-            _placeableObjectInstance.OnPicked += HandlePicked;
-            _placeableObjectInstance.OnDestroyed += HandleDestroyed;
-
-            DisableInteraction();
-            OnObjectSpawned?.Invoke(this, _placeableObjectInstance);
-            UpdateActionButtonsState();
-        }
-
-        private static Vector3 GetSpawnPositionUnderCursor()
-        {
-            var camera = Camera.main;
-            var cursorPlane = FindFirstObjectByType<CursorPlane>();
-            if (!camera || cursorPlane == null)
-                return Vector3.zero;
-
-            var ray = camera.ScreenPointToRay(Input.mousePosition);
-            return cursorPlane.Plane.Raycast(ray, out var distance) 
-                ? ray.GetPoint(distance) 
-                : new Vector3(0f, cursorPlane.currentLayer, 0f);
         }
 
         private void HandlePlaced(PlaceableObject.PlaceableObject placeableObject)
@@ -263,10 +260,7 @@ namespace UI
             if (placeableObject != _placeableObjectInstance)
                 return;
 
-            UnsubscribeFromInstance();
-            _placeableObjectInstance = null;
-            EnableInteraction();
-            UpdateActionButtonsState();
+            ReleaseInstance();
         }
 
         private void UnsubscribeFromInstance()

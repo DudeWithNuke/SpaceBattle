@@ -1,42 +1,55 @@
 using System;
 using System.Collections.Generic;
 using GameBoard;
-using UI;
-using UnityEngine;
 using Reflex.Attributes;
+using UI;
+using UI.Animation;
+using UnityEngine;
 
-namespace PlaceableObject.Manipulation
+namespace PlaceableObjectManipulation
 {
-    [RequireComponent(typeof(PlaceableObjectButtonsController))]
-    [RequireComponent(typeof(PlaceableObjectPicker))]
-    public class ObjectSelection : MonoBehaviour
+    [RequireComponent(typeof(ButtonsController))]
+    public class Selection : MonoBehaviour
     {
-        public event Action<PlaceableObject> OnStateChanged;
+        public event Action<PlaceableObject.PlaceableObject> OnStateChanged;
 
         [SerializeField] private Transform buttonPanel;
         [SerializeField] private ShipButton buttonPrefab;
+        [SerializeField] private ListSwitch listSwitch;
+        [SerializeField] private bool listSwitchOnShowsPlaced = true;
 
-        [Inject] private ObjectMoving _objectMoving;
+        [Inject] private Moving _moving;
         [Inject] private CursorPlane _cursorPlane;
+        [Inject] private StateCoordinator _stateCoordinator;
 
-        public PlaceableObject CurrentPickedObject { get; private set; }
-        private readonly HashSet<PlaceableObject> _trackedObjects = new();
-        private PlaceableObjectButtonsController _buttonsController;
-        private PlaceableObjectPicker _picker;
+        public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
+        private readonly HashSet<PlaceableObject.PlaceableObject> _trackedObjects = new();
+        private ButtonsController _buttonsController;
+        private Picking _picker;
 
         private void Awake()
         {
-            _buttonsController = GetComponent<PlaceableObjectButtonsController>();
-            _picker = GetComponent<PlaceableObjectPicker>();
+            _picker = new Picking(_stateCoordinator);
+
+            _buttonsController = GetComponent<ButtonsController>();
 
             _buttonsController.Initialize(buttonPanel, buttonPrefab);
             _buttonsController.OnObjectSpawned += OnObjectSpawned;
+
+            if (listSwitch != null)
+            {
+                listSwitch.OnValueChanged += HandleListSwitchChanged;
+                HandleListSwitchChanged(listSwitch.IsOn);
+            }
         }
 
         private void OnDestroy()
         {
             if (_buttonsController != null)
                 _buttonsController.OnObjectSpawned -= OnObjectSpawned;
+            
+            if (listSwitch != null)
+                listSwitch.OnValueChanged -= HandleListSwitchChanged;
 
             foreach (var placeableObject in _trackedObjects)
             {
@@ -49,7 +62,7 @@ namespace PlaceableObject.Manipulation
             }
         }
 
-        private void OnObjectSpawned(PlaceableObject placeableObject)
+        private void OnObjectSpawned(PlaceableObject.PlaceableObject placeableObject)
         {
             _trackedObjects.Add(placeableObject);
 
@@ -60,14 +73,23 @@ namespace PlaceableObject.Manipulation
             OnPicked(placeableObject);
         }
 
-        private void OnPicked(PlaceableObject placeableObject)
+        private void HandleListSwitchChanged(bool isOn)
+        {
+            if (_buttonsController == null)
+                return;
+
+            var showPlacedObjects = listSwitchOnShowsPlaced ? isOn : !isOn;
+            _buttonsController.SetShowPlacedObjects(showPlacedObjects);
+        }
+
+        private void OnPicked(PlaceableObject.PlaceableObject placeableObject)
         {
             CurrentPickedObject = placeableObject;
             _buttonsController.HandleObjectPicked(placeableObject);
             OnStateChanged?.Invoke(placeableObject);
         }
 
-        private void OnPlaced(PlaceableObject placeableObject)
+        private void OnPlaced(PlaceableObject.PlaceableObject placeableObject)
         {
             if (CurrentPickedObject == placeableObject)
                 CurrentPickedObject = null;
@@ -76,7 +98,7 @@ namespace PlaceableObject.Manipulation
             OnStateChanged?.Invoke(null);
         }
 
-        private void OnPlaceableObjectDestroyed(PlaceableObject placeableObject)
+        private void OnPlaceableObjectDestroyed(PlaceableObject.PlaceableObject placeableObject)
         {
             placeableObject.OnPicked -= OnPicked;
             placeableObject.OnPlaced -= OnPlaced;
@@ -99,22 +121,19 @@ namespace PlaceableObject.Manipulation
                 return false;
             if (_cursorPlane.IsTransitioning)
                 return false;
-            if (_objectMoving.IsMoving)
+            if (_moving.IsMoving)
                 return false;
-            if (!_objectMoving.IsAtTargetPosition())
+            if (!_moving.IsAtTargetPosition())
                 return false;
-            if (!_objectMoving.HasValidTarget)
+            if (!_moving.HasValidTarget)
                 return false;
             
-            return CurrentPickedObject.TryPlace();
+            return _stateCoordinator != null && _stateCoordinator.TryPlace(CurrentPickedObject);
         }
 
         public bool TryPickClosest(Ray ray)
         {
-            if (CurrentPickedObject)
-                return false;
-
-            return _picker != null && _picker.TryPickClosest(ray);
+            return !CurrentPickedObject && _picker.TryPickClosest(ray);
         }
 
         public bool DestroyCurrentPickedObject()

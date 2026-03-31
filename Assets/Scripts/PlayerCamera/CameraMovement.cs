@@ -3,7 +3,7 @@ using InputController;
 using System;
 using PlayerCamera.Movement;
 using PlaceableObject;
-using PlaceableObject.Manipulation;
+using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using ScriptableObjects;
 using UnityEngine;
@@ -18,7 +18,7 @@ namespace PlayerCamera
 
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;
-        [Inject] private ObjectSelection _objectSelection;
+        [Inject] private Selection _selection;
 
         private Transform _cameraTransform;
 
@@ -73,10 +73,10 @@ namespace PlayerCamera
 
         private void ReturnPickedObjectToMenuIfAny()
         {
-            if (_objectSelection == null)
+            if (_selection == null)
                 return;
 
-            _objectSelection.DestroyCurrentPickedObject();
+            _selection.DestroyCurrentPickedObject();
         }
 
         private void NotifyBattlefieldSideChangeIfNeeded()

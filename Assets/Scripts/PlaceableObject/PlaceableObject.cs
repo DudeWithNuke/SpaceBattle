@@ -1,5 +1,6 @@
 using System;
 using GameBoard;
+using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using ScriptableObjects;
 using UnityEngine;
@@ -14,12 +15,12 @@ namespace PlaceableObject
 
     public enum PlaceableObjectState
     {
+        Stored,
         Picked,
-        Placing,
         Placed
     }
 
-    [RequireComponent(typeof(ObjectGridInteraction))]
+    [RequireComponent(typeof(GridInteraction))]
     public abstract class PlaceableObject : MonoBehaviour
     {
         public event Action<PlaceableObject> OnPlaced;
@@ -37,7 +38,9 @@ namespace PlaceableObject
         protected virtual bool UsesCellOccupancy => true;
 
         private PlaceableObjectColorController _colorController;
-        private ObjectGridInteraction _gridInteraction;
+        private GridInteraction _gridInteraction;
+        private bool _isRuntimeInitialized;
+        private bool _pendingTakeFromStorage;
 
         [SerializeField] private PlaceableObjectSettings placeableObjectSettings;
 
@@ -46,13 +49,13 @@ namespace PlaceableObject
 
         private void Awake()
         {
+            State = PlaceableObjectState.Stored;
             EnsureShapeInitialized();
-            _gridInteraction = GetComponent<ObjectGridInteraction>();
+            _gridInteraction = GetComponent<GridInteraction>();
         }
 
         private void Start()
         {
-            State = PlaceableObjectState.Placing;
             IsPlayerObject = DeploymentSide == PlaceableObjectDeploymentSide.OwnField;
             _gridInteraction.Initialize(Shape, UsesCellOccupancy, IsPlayerObject);
             _colorController =
@@ -60,14 +63,18 @@ namespace PlaceableObject
 
             var startPos = transform.position;
             CurrentPosition = WorldToCellPosition(startPos);
+            _isRuntimeInitialized = true;
+
+            if (_pendingTakeFromStorage)
+            {
+                _pendingTakeFromStorage = false;
+                ActivateFromStorage();
+            }
         }
 
         private void LateUpdate()
         {
-            if (State == PlaceableObjectState.Picked)
-                State = PlaceableObjectState.Placing;
-
-            if (State != PlaceableObjectState.Placing)
+            if (State != PlaceableObjectState.Picked)
                 return;
 
             _gridInteraction.UpdateHover(CurrentPosition);
@@ -83,7 +90,7 @@ namespace PlaceableObject
 
         public bool TryPlace()
         {
-            if (State != PlaceableObjectState.Placing)
+            if (State != PlaceableObjectState.Picked)
                 return false;
             
             if (!_gridInteraction.CanPlace(CurrentPosition))
@@ -106,6 +113,28 @@ namespace PlaceableObject
             UpdatePlacementVisualState();
             OnPicked?.Invoke(this);
             return true;
+        }
+
+        public bool TryTakeFromStorage()
+        {
+            if (State != PlaceableObjectState.Stored)
+                return false;
+
+            if (!_isRuntimeInitialized)
+            {
+                _pendingTakeFromStorage = true;
+                return true;
+            }
+
+            ActivateFromStorage();
+            return true;
+        }
+
+        private void ActivateFromStorage()
+        {
+            State = PlaceableObjectState.Picked;
+            UpdatePlacementVisualState();
+            OnPicked?.Invoke(this);
         }
 
         private void OnDestroy()

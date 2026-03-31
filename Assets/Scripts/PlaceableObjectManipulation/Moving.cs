@@ -1,13 +1,14 @@
 using GameBoard;
+using PlaceableObject;
 using Reflex.Attributes;
 using ScriptableObjects;
 using UnityEngine;
 
-namespace PlaceableObject.Manipulation
+namespace PlaceableObjectManipulation
 {
-    public class ObjectMoving : MonoBehaviour
+    public class Moving : MonoBehaviour
     {
-        [Inject] private ObjectSelection _objectSelection;
+        [Inject] private Selection _selection;
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;
         
@@ -16,7 +17,7 @@ namespace PlaceableObject.Manipulation
         public bool IsMoving { get; private set; }
 
         private Camera _camera;
-        private PlaceableObject _placeableObject;
+        private PlaceableObject.PlaceableObject _placeableObject;
         private Vector3 _previousPosition;
         private Vector3 _targetWorldPosition;
         private Vector3 _lastCursorWorldPoint;
@@ -29,8 +30,8 @@ namespace PlaceableObject.Manipulation
 
         private void Awake()
         {
-            if (_objectSelection != null)
-                _objectSelection.OnStateChanged += HandleSelectionChanged;
+            if (_selection != null)
+                _selection.OnStateChanged += HandleSelectionChanged;
         }
 
         private void Start()
@@ -40,11 +41,11 @@ namespace PlaceableObject.Manipulation
 
         private void OnDestroy()
         {
-            if (_objectSelection != null)
-                _objectSelection.OnStateChanged -= HandleSelectionChanged;
+            if (_selection != null)
+                _selection.OnStateChanged -= HandleSelectionChanged;
         }
 
-        private void HandleSelectionChanged(PlaceableObject placeableObject)
+        private void HandleSelectionChanged(PlaceableObject.PlaceableObject placeableObject)
         {
             _placeableObject = placeableObject;
             _previousPosition = placeableObject ? placeableObject.transform.position : Vector3.zero;

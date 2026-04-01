@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Generic;
 using GameBoard;
+using PlaceableObjectManipulation.Interaction;
 using Reflex.Attributes;
 using UI;
 using UI.Animation;
@@ -17,75 +17,56 @@ namespace PlaceableObjectManipulation
         [SerializeField] private ShipButton buttonPrefab;
         [SerializeField] private ListSwitch listSwitch;
         [SerializeField] private bool listSwitchOnShowsPlaced = true;
+        [SerializeField] private ButtonsController buttonsController;
+        [SerializeField] private SpawnedObjectLifecycleTracker lifecycleTracker;
 
         [Inject] private Moving _moving;
         [Inject] private CursorPlane _cursorPlane;
-        [Inject] private StateCoordinator _stateCoordinator;
 
         public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
-        private readonly HashSet<PlaceableObject.PlaceableObject> _trackedObjects = new();
-        private ButtonsController _buttonsController;
         private Picking _picker;
 
         private void Awake()
         {
-            _picker = new Picking(_stateCoordinator);
+            _picker = new Picking();
+            lifecycleTracker.OnPicked += OnPicked;
+            lifecycleTracker.OnPlaced += OnPlaced;
+            lifecycleTracker.OnDestroyed += OnPlaceableObjectDestroyed;
 
-            _buttonsController = GetComponent<ButtonsController>();
-
-            _buttonsController.Initialize(buttonPanel, buttonPrefab);
-            _buttonsController.OnObjectSpawned += OnObjectSpawned;
-
-            if (listSwitch != null)
-            {
-                listSwitch.OnValueChanged += HandleListSwitchChanged;
-                HandleListSwitchChanged(listSwitch.IsOn);
-            }
+            buttonsController.Initialize(buttonPanel, buttonPrefab);
+            buttonsController.OnObjectSpawned += OnObjectSpawned;
+            
+            listSwitch.OnValueChanged += HandleListSwitchChanged;
+            HandleListSwitchChanged(listSwitch.IsOn);
         }
 
         private void OnDestroy()
         {
-            if (_buttonsController != null)
-                _buttonsController.OnObjectSpawned -= OnObjectSpawned;
-            
-            if (listSwitch != null)
-                listSwitch.OnValueChanged -= HandleListSwitchChanged;
-
-            foreach (var placeableObject in _trackedObjects)
-            {
-                if (!placeableObject)
-                    continue;
-
-                placeableObject.OnPicked -= OnPicked;
-                placeableObject.OnPlaced -= OnPlaced;
-                placeableObject.OnDestroyed -= OnPlaceableObjectDestroyed;
-            }
+            buttonsController.OnObjectSpawned -= OnObjectSpawned;
+            lifecycleTracker.OnPicked -= OnPicked;
+            lifecycleTracker.OnPlaced -= OnPlaced;
+            lifecycleTracker.OnDestroyed -= OnPlaceableObjectDestroyed;
+            listSwitch.OnValueChanged -= HandleListSwitchChanged;
         }
 
         private void OnObjectSpawned(PlaceableObject.PlaceableObject placeableObject)
         {
-            _trackedObjects.Add(placeableObject);
+            lifecycleTracker.Register(placeableObject);
 
-            placeableObject.OnPicked += OnPicked;
-            placeableObject.OnPlaced += OnPlaced;
-            placeableObject.OnDestroyed += OnPlaceableObjectDestroyed;
-
-            OnPicked(placeableObject);
+            if (CurrentPickedObject != placeableObject)
+                OnPicked(placeableObject);
         }
 
         private void HandleListSwitchChanged(bool isOn)
         {
-            if (_buttonsController == null)
-                return;
-
             var showPlacedObjects = listSwitchOnShowsPlaced ? isOn : !isOn;
-            _buttonsController.SetShowPlacedObjects(showPlacedObjects);
+            buttonsController.SetShowPlacedObjects(showPlacedObjects);
         }
 
         private void OnPicked(PlaceableObject.PlaceableObject placeableObject)
         {
             CurrentPickedObject = placeableObject;
-            _buttonsController.HandleObjectPicked(placeableObject);
+            buttonsController.HandleObjectPicked(placeableObject);
             OnStateChanged?.Invoke(placeableObject);
         }
 
@@ -94,25 +75,18 @@ namespace PlaceableObjectManipulation
             if (CurrentPickedObject == placeableObject)
                 CurrentPickedObject = null;
 
-            _buttonsController.HandleSelectionCleared();
+            buttonsController.HandleSelectionCleared();
             OnStateChanged?.Invoke(null);
         }
 
         private void OnPlaceableObjectDestroyed(PlaceableObject.PlaceableObject placeableObject)
         {
-            placeableObject.OnPicked -= OnPicked;
-            placeableObject.OnPlaced -= OnPlaced;
-            placeableObject.OnDestroyed -= OnPlaceableObjectDestroyed;
-
-            _trackedObjects.Remove(placeableObject);
-            _buttonsController.UnregisterSpawnedObject(placeableObject);
-
-            if (CurrentPickedObject == placeableObject)
-            {
-                CurrentPickedObject = null;
-                _buttonsController.HandleSelectionCleared();
-                OnStateChanged?.Invoke(null);
-            }
+            if (CurrentPickedObject != placeableObject)
+                return;
+            
+            CurrentPickedObject = null;
+            buttonsController.HandleSelectionCleared();
+            OnStateChanged?.Invoke(null);
         }
 
         public bool TryPlaceCurrent()
@@ -128,7 +102,7 @@ namespace PlaceableObjectManipulation
             if (!_moving.HasValidTarget)
                 return false;
             
-            return _stateCoordinator != null && _stateCoordinator.TryPlace(CurrentPickedObject);
+            return CurrentPickedObject.TryPlace();
         }
 
         public bool TryPickClosest(Ray ray)

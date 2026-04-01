@@ -126,6 +126,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlaceableObject.Ship
   placeableObjectSettings: {fileID: 11400000, guid: 94ea9b9113843c0428a6044196bfa487, type: 2}
+  gridInteraction: {fileID: 5379367091383524626}
+  <Accuracy>k__BackingField: 0.9
+  <Stealth>k__BackingField: 0.9
+  <Sonar>k__BackingField: 0.5
+  <Resistance>k__BackingField: 0.5
+  <Energy>k__BackingField: 6
 --- !u!114 &5379367091383524626
 MonoBehaviour:
   m_ObjectHideFlags: 0

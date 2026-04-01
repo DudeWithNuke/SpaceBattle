@@ -4,7 +4,6 @@ using UnityEngine.UI;
 
 namespace UI.Animation
 {
-    [RequireComponent(typeof(Toggle), typeof(Animator))]
     public class SortToggle : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         private Toggle _toggle;

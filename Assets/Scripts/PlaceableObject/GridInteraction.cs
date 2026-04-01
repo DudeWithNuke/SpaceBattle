@@ -1,16 +1,16 @@
 using GameBoard;
-using PlaceableObject;
+using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using UnityEngine;
 
-namespace PlaceableObjectManipulation
+namespace PlaceableObject
 {
     public sealed class GridInteraction : MonoBehaviour
     {
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;
 
-        private PlaceableObjectShape _shape;
+        private Shape _shape;
         private bool _usesCellOccupancy;
         private bool _isPlayerObject;
 
@@ -21,7 +21,7 @@ namespace PlaceableObjectManipulation
         private Vector3Int[] _previousHoverCells;
         private Vector3Int[] _placedOccupiedCells;
 
-        public void Initialize(PlaceableObjectShape shape, bool usesCellOccupancy, bool isPlayerObject)
+        public void Initialize(Shape shape, bool usesCellOccupancy, bool isPlayerObject)
         {
             _shape = shape;
             _usesCellOccupancy = usesCellOccupancy;
@@ -64,17 +64,7 @@ namespace PlaceableObjectManipulation
 
         public void ApplyPick(Vector3Int position)
         {
-            if (_usesCellOccupancy && _placedOccupiedCells != null)
-                _cellGrid.ReleaseCells(_placedOccupiedCells, _isPlayerObject);
-
-            var occupiedCells = _placedOccupiedCells ?? GetOccupiedCells(position);
-            foreach (var cellPos in occupiedCells)
-            {
-                var cell = _cellGrid.GetCell(cellPos, _isPlayerObject);
-                if (cell && _usesCellOccupancy)
-                    cell.SetSelected(false, cell.Position.y == _cursorPlane.currentLayer);
-            }
-
+            ReleaseOccupiedCellsAndClearSelection(position);
             _placedOccupiedCells = null;
         }
 
@@ -85,16 +75,7 @@ namespace PlaceableObjectManipulation
             if (!isPlaced)
                 return;
 
-            var occupiedCells = _placedOccupiedCells ?? GetOccupiedCells(position);
-            if (_usesCellOccupancy)
-                _cellGrid.ReleaseCells(occupiedCells, _isPlayerObject);
-
-            foreach (var cellPos in occupiedCells)
-            {
-                var cell = _cellGrid.GetCell(cellPos, _isPlayerObject);
-                if (cell && _usesCellOccupancy)
-                    cell.SetSelected(false, cell.Position.y == _cursorPlane.currentLayer);
-            }
+            ReleaseOccupiedCellsAndClearSelection(position);
         }
 
         public void UpdateHover(Vector3Int position)
@@ -139,13 +120,7 @@ namespace PlaceableObjectManipulation
         private bool IsWithinGridBounds(Vector3Int position)
         {
             var occupiedCells = GetOccupiedCells(position);
-            foreach (var cellPos in occupiedCells)
-                if (cellPos.x < 0 || cellPos.x >= _cellGrid.GridSize.x ||
-                    cellPos.y < 0 || cellPos.y >= _cellGrid.GridSize.y ||
-                    cellPos.z < 0 || cellPos.z >= _cellGrid.GridSize.z)
-                    return false;
-
-            return true;
+            return GridCoordinateUtility.AreWithinGridBounds(_cellGrid, occupiedCells);
         }
 
         private Vector3Int[] GetOccupiedCells(Vector3Int position)
@@ -156,6 +131,20 @@ namespace PlaceableObjectManipulation
             _cachedPosition = position;
             _cachedOccupiedCells = _shape.GetOccupiedCells(position);
             return _cachedOccupiedCells;
+        }
+
+        private void ReleaseOccupiedCellsAndClearSelection(Vector3Int position)
+        {
+            var occupiedCells = _placedOccupiedCells ?? GetOccupiedCells(position);
+            if (_usesCellOccupancy)
+                _cellGrid.ReleaseCells(occupiedCells, _isPlayerObject);
+
+            foreach (var cellPos in occupiedCells)
+            {
+                var cell = _cellGrid.GetCell(cellPos, _isPlayerObject);
+                if (cell && _usesCellOccupancy)
+                    cell.SetSelected(false, cell.Position.y == _cursorPlane.currentLayer);
+            }
         }
     }
 }

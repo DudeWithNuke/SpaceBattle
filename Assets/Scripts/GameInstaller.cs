@@ -11,7 +11,6 @@ public class GameInstaller : MonoBehaviour, IInstaller
     [SerializeField] private CursorPlane cursorPlane;
     [SerializeField] private Selection selection;
     [SerializeField] private Moving moving;
-    [SerializeField] private StateCoordinator stateCoordinator = new();
     [SerializeField] private Spawning spawning;
     [SerializeField] private SpawnPositionResolver spawnPositionResolver = new();
     [SerializeField] private ShipRoster shipRoster;
@@ -26,7 +25,6 @@ public class GameInstaller : MonoBehaviour, IInstaller
         builder.RegisterValue(cursorPlane);
         builder.RegisterValue(selection);
         builder.RegisterValue(moving);
-        builder.RegisterValue(stateCoordinator);
         builder.RegisterValue(spawning);
         builder.RegisterValue(spawnPositionResolver);
         builder.RegisterValue(shipRoster);

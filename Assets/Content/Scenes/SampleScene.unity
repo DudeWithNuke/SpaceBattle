@@ -1612,6 +1612,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496e09e6c0043379815cc496eceda41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.SortToggle
+  isSelectedParameter: IsSelected
+  isHoveredParameter: IsHovered
 --- !u!1 &324701218
 GameObject:
   m_ObjectHideFlags: 0
@@ -1698,8 +1700,8 @@ GameObject:
   - component: {fileID: 330585546}
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
-  - component: {fileID: 330585547}
   - component: {fileID: 330585548}
+  - component: {fileID: 330585547}
   - component: {fileID: 330585549}
   m_Layer: 0
   m_Name: Main Camera
@@ -2111,9 +2113,12 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 445403121}
+  - component: {fileID: 445403124}
   - component: {fileID: 445403122}
+  - component: {fileID: 445403123}
+  - component: {fileID: 445403125}
   m_Layer: 0
-  m_Name: ObjectSelection
+  m_Name: ObjectManipulation
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2143,11 +2148,51 @@ MonoBehaviour:
   m_GameObject: {fileID: 445403120}
   m_Enabled: 1
   m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8cec0658bb92e64408d9e3a7a2379b23, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaceableObjectManipulation.Spawning
+  targetCamera: {fileID: 330585545}
+--- !u!114 &445403123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445403120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f72c4a613c9fbb4cac97e1990126766, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaceableObjectManipulation.ButtonsController
+--- !u!114 &445403124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445403120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02d31ff53c2b4b2daa9da88a831b3430, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaceableObjectManipulation.Moving
+  placeableObjectSettings: {fileID: 11400000, guid: 94ea9b9113843c0428a6044196bfa487, type: 2}
+--- !u!114 &445403125
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445403120}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 452e459542004c31a6813e88024051a2, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlaceableObjectManipulation.Selection
   buttonPanel: {fileID: 563476061}
   buttonPrefab: {fileID: 3646025903997374981, guid: 1080acc4d331d7947b4a231c37f4942b, type: 3}
+  listSwitch: {fileID: 1001583043}
+  listSwitchOnShowsPlaced: 1
 --- !u!1 &510327794
 GameObject:
   m_ObjectHideFlags: 0
@@ -2183,7 +2228,6 @@ Transform:
   - {fileID: 1980345877}
   - {fileID: 2011924762}
   - {fileID: 445403121}
-  - {fileID: 1454200695}
   - {fileID: 330585546}
   - {fileID: 1249091663}
   m_Father: {fileID: 0}
@@ -2202,8 +2246,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameInstaller
   cellGrid: {fileID: 1629808314}
   cursorPlane: {fileID: 1980345878}
-  objectSelection: {fileID: 445403122}
-  objectMoving: {fileID: 1454200696}
+  selection: {fileID: 445403125}
+  moving: {fileID: 445403124}
+  spawning: {fileID: 445403122}
   shipRoster: {fileID: 2011924763}
   cameraMovement: {fileID: 330585549}
   cameraInputController: {fileID: 1249091665}
@@ -2274,6 +2319,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496e09e6c0043379815cc496eceda41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.SortToggle
+  isSelectedParameter: IsSelected
+  isHoveredParameter: IsHovered
 --- !u!114 &518172153
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2555,6 +2602,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496e09e6c0043379815cc496eceda41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.SortToggle
+  isSelectedParameter: IsSelected
+  isHoveredParameter: IsHovered
 --- !u!114 &553640954
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2847,6 +2896,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496e09e6c0043379815cc496eceda41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.SortToggle
+  isSelectedParameter: IsSelected
+  isHoveredParameter: IsHovered
 --- !u!114 &601744816
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3780,7 +3831,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c2f96b9f1c3c4c17b587dd7c47ba9117, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.Animation.ListSwitch
-  _parameterName: IsOn
+  isOnParameter: IsOn
 --- !u!1 &1059537110
 GameObject:
   m_ObjectHideFlags: 0
@@ -3834,6 +3885,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496e09e6c0043379815cc496eceda41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.SortToggle
+  isSelectedParameter: IsSelected
+  isHoveredParameter: IsHovered
 --- !u!114 &1059537113
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4751,51 +4804,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1425368982}
   m_CullTransparentMesh: 1
---- !u!1 &1454200694
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1454200695}
-  - component: {fileID: 1454200696}
-  m_Layer: 0
-  m_Name: ObjectMoving
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1454200695
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1454200694}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 510327797}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1454200696
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1454200694}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 02d31ff53c2b4b2daa9da88a831b3430, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  placeableObjectSettings: {fileID: 11400000, guid: 94ea9b9113843c0428a6044196bfa487, type: 2}
 --- !u!1 &1471058685
 GameObject:
   m_ObjectHideFlags: 0
@@ -6544,6 +6552,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e496e09e6c0043379815cc496eceda41, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UI.SortToggle
+  isSelectedParameter: IsSelected
+  isHoveredParameter: IsHovered
 --- !u!114 &2054397280
 MonoBehaviour:
   m_ObjectHideFlags: 0

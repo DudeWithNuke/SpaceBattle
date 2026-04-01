@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using ScriptableObjects;
 using UnityEngine;
 
@@ -10,13 +10,13 @@ namespace PlaceableObject
         InvalidPlacement
     }
 
-    public class PlaceableObjectColorController
+    public class ColorController
     {
         private readonly Material[] _materials;
         private readonly Dictionary<PlaceableObjectVisualState, Color> _palette;
         private PlaceableObjectVisualState _currentState;
 
-        public PlaceableObjectColorController(Renderer[] renderers, PlaceableObjectSettings settings)
+        public ColorController(Renderer[] renderers, PlaceableObjectSettings settings)
         {
             var materials = new List<Material>();
             foreach (var renderer in renderers)

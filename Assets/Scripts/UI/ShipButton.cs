@@ -1,7 +1,9 @@
 ﻿﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using PlaceableObject;
+using PlaceableObject.Ships;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,7 +20,7 @@ namespace UI
         private PlaceableObject.PlaceableObject _placeableObjectInstance;
         private Button _button;
         private TMP_Text _label;
-        private PlaceableObjectUiProfile _uiProfile;
+        private UiProfile _uiProfile;
         private readonly List<Button> _actionButtons = new();
 
         [Header("Card UI")]
@@ -38,7 +40,7 @@ namespace UI
             _placeableObjectPrefab = prefab;
             _button = primaryActionButton != null ? primaryActionButton : GetComponent<Button>();
             _label = GetComponentInChildren<TMP_Text>(true);
-            _uiProfile = _placeableObjectPrefab ? _placeableObjectPrefab.GetComponent<PlaceableObjectUiProfile>() : null;
+            _uiProfile = _placeableObjectPrefab ? _placeableObjectPrefab.GetComponent<UiProfile>() : null;
             if (statsBars == null)
                 statsBars = GetComponent<UnitCardStatsBars>();
             if (vitalityBars == null)
@@ -86,7 +88,7 @@ namespace UI
             UpdateActionButtonsState();
         }
 
-        private static string GetDisplayName(PlaceableObject.PlaceableObject placeableObject, PlaceableObjectUiProfile uiProfile)
+        private static string GetDisplayName(PlaceableObject.PlaceableObject placeableObject, UiProfile uiProfile)
         {
             if (uiProfile != null && !string.IsNullOrWhiteSpace(uiProfile.DisplayName))
                 return uiProfile.DisplayName;
@@ -291,11 +293,8 @@ namespace UI
 
         private void ClearActionButtons()
         {
-            foreach (var actionButton in _actionButtons)
+            foreach (var actionButton in _actionButtons.Where(actionButton => actionButton))
             {
-                if (!actionButton)
-                    continue;
-
                 actionButton.onClick.RemoveAllListeners();
                 Destroy(actionButton.gameObject);
             }

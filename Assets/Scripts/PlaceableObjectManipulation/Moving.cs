@@ -30,8 +30,7 @@ namespace PlaceableObjectManipulation
 
         private void Awake()
         {
-            if (_selection != null)
-                _selection.OnStateChanged += HandleSelectionChanged;
+            _selection.OnStateChanged += HandleSelectionChanged;
         }
 
         private void Start()
@@ -41,8 +40,7 @@ namespace PlaceableObjectManipulation
 
         private void OnDestroy()
         {
-            if (_selection != null)
-                _selection.OnStateChanged -= HandleSelectionChanged;
+            _selection.OnStateChanged -= HandleSelectionChanged;
         }
 
         private void HandleSelectionChanged(PlaceableObject.PlaceableObject placeableObject)
@@ -211,7 +209,7 @@ namespace PlaceableObjectManipulation
 
         private Vector3 ClampWorldPositionToCursorPlaneRange(Vector3 worldPosition)
         {
-            var origin = _placeableObject.IsPlayerObject ? _cellGrid.OwnOrigin : _cellGrid.EnemyOrigin;
+            var origin = GridCoordinateUtility.GetOrigin(_cellGrid, _placeableObject.IsPlayerObject);
             var additionalRange = placeableObjectSettings.additionalMovementRange;
             var halfAdditionalRange = additionalRange * 0.5f;
             var minX = origin.x - halfAdditionalRange;
@@ -228,22 +226,26 @@ namespace PlaceableObjectManipulation
 
         private Vector3Int WorldToCellPosition(Vector3 worldPosition)
         {
-            var origin = _placeableObject.IsPlayerObject ? _cellGrid.OwnOrigin : _cellGrid.EnemyOrigin;
-            return CoordinateConverter.WorldToCellPosition(worldPosition, origin, _cursorPlane.currentLayer,
+            return GridCoordinateUtility.WorldToCellPosition(
+                _cellGrid,
+                _placeableObject.IsPlayerObject,
+                worldPosition,
+                _cursorPlane.currentLayer,
                 placeableObjectSettings.coordinateRoundingOffset);
         }
 
         private Vector3 CellToWorldPosition(Vector3Int cellPosition)
         {
-            var origin = _placeableObject.IsPlayerObject ? _cellGrid.OwnOrigin : _cellGrid.EnemyOrigin;
-            return CoordinateConverter.CellToWorldPosition(cellPosition, origin, placeableObjectSettings.cellCenterOffset);
+            return GridCoordinateUtility.CellToWorldPosition(
+                _cellGrid,
+                _placeableObject.IsPlayerObject,
+                cellPosition,
+                placeableObjectSettings.cellCenterOffset);
         }
 
         private bool IsWithinGridBounds(Vector3Int cellPosition)
         {
-            return cellPosition.x >= 0 && cellPosition.x < _cellGrid.GridSize.x &&
-                   cellPosition.y >= 0 && cellPosition.y < _cellGrid.GridSize.y &&
-                   cellPosition.z >= 0 && cellPosition.z < _cellGrid.GridSize.z;
+            return GridCoordinateUtility.IsWithinGridBounds(_cellGrid, cellPosition);
         }
 
         private void UpdateMovingState()

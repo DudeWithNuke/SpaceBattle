@@ -4,7 +4,6 @@ using UnityEngine.UI;
 
 namespace UI.Animation
 {
-    [RequireComponent(typeof(Toggle), typeof(Animator))]
     public class ListSwitch : MonoBehaviour
     {
         public event Action<bool> OnValueChanged;

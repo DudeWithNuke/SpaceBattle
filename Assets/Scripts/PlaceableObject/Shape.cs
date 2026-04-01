@@ -20,7 +20,7 @@ namespace PlaceableObject
     }
 
     [CreateAssetMenu(fileName = "PlaceableObjectShape", menuName = "Game/PlaceableObject Shape")]
-    public class PlaceableObjectShape : ScriptableObject
+    public class Shape : ScriptableObject
     {
         public Vector3Int rootPoint = Vector3Int.zero;
         public List<CellOffset> occupiedOffsets = new();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using GameBoard;
 using PlaceableObjectManipulation;
 using Reflex.Attributes;
@@ -20,7 +20,6 @@ namespace PlaceableObject
         Placed
     }
 
-    [RequireComponent(typeof(GridInteraction))]
     public abstract class PlaceableObject : MonoBehaviour
     {
         public event Action<PlaceableObject> OnPlaced;
@@ -28,7 +27,7 @@ namespace PlaceableObject
         public event Action<PlaceableObject> OnDestroyed;
 
         public PlaceableObjectState State { get; private set; }
-        public PlaceableObjectShape Shape { get; private set; }
+        public Shape Shape { get; private set; }
         public Vector3Int CurrentPosition { get; set; }
         public bool IsPlayerObject { get; private set; }
 
@@ -37,12 +36,12 @@ namespace PlaceableObject
 
         protected virtual bool UsesCellOccupancy => true;
 
-        private PlaceableObjectColorController _colorController;
-        private GridInteraction _gridInteraction;
+        private ColorController _colorController;
         private bool _isRuntimeInitialized;
         private bool _pendingTakeFromStorage;
 
         [SerializeField] private PlaceableObjectSettings placeableObjectSettings;
+        [SerializeField] private GridInteraction gridInteraction;
 
         [Inject] private CellGrid _cellGrid;
         [Inject] private CursorPlane _cursorPlane;
@@ -51,25 +50,23 @@ namespace PlaceableObject
         {
             State = PlaceableObjectState.Stored;
             EnsureShapeInitialized();
-            _gridInteraction = GetComponent<GridInteraction>();
         }
 
         private void Start()
         {
             IsPlayerObject = DeploymentSide == PlaceableObjectDeploymentSide.OwnField;
-            _gridInteraction.Initialize(Shape, UsesCellOccupancy, IsPlayerObject);
-            _colorController =
-                new PlaceableObjectColorController(GetComponentsInChildren<Renderer>(), placeableObjectSettings);
+            gridInteraction.Initialize(Shape, UsesCellOccupancy, IsPlayerObject);
+            _colorController = new ColorController(GetComponentsInChildren<Renderer>(), placeableObjectSettings);
 
             var startPos = transform.position;
             CurrentPosition = WorldToCellPosition(startPos);
             _isRuntimeInitialized = true;
 
-            if (_pendingTakeFromStorage)
-            {
-                _pendingTakeFromStorage = false;
-                ActivateFromStorage();
-            }
+            if (!_pendingTakeFromStorage)
+                return;
+            
+            _pendingTakeFromStorage = false;
+            ActivateFromStorage();
         }
 
         private void LateUpdate()
@@ -77,15 +74,18 @@ namespace PlaceableObject
             if (State != PlaceableObjectState.Picked)
                 return;
 
-            _gridInteraction.UpdateHover(CurrentPosition);
+            gridInteraction.UpdateHover(CurrentPosition);
             UpdatePlacementVisualState();
         }
 
         private Vector3Int WorldToCellPosition(Vector3 worldPosition)
         {
-            var origin = IsPlayerObject ? _cellGrid.OwnOrigin : _cellGrid.EnemyOrigin;
-            return CoordinateConverter.WorldToCellPosition(worldPosition, origin, _cursorPlane.currentLayer,
-                placeableObjectSettings != null ? placeableObjectSettings.coordinateRoundingOffset : 0.5f);
+            return GridCoordinateUtility.WorldToCellPosition(
+                _cellGrid,
+                IsPlayerObject,
+                worldPosition,
+                _cursorPlane.currentLayer,
+                placeableObjectSettings.coordinateRoundingOffset);
         }
 
         public bool TryPlace()
@@ -93,11 +93,11 @@ namespace PlaceableObject
             if (State != PlaceableObjectState.Picked)
                 return false;
             
-            if (!_gridInteraction.CanPlace(CurrentPosition))
+            if (!gridInteraction.CanPlace(CurrentPosition))
                 return false;
 
             State = PlaceableObjectState.Placed;
-            _gridInteraction.ApplyPlacement(CurrentPosition);
+            gridInteraction.ApplyPlacement(CurrentPosition);
             _colorController?.SetState(PlaceableObjectVisualState.Default);
             OnPlaced?.Invoke(this);
             return true;
@@ -109,7 +109,7 @@ namespace PlaceableObject
                 return false;
 
             State = PlaceableObjectState.Picked;
-            _gridInteraction.ApplyPick(CurrentPosition);
+            gridInteraction.ApplyPick(CurrentPosition);
             UpdatePlacementVisualState();
             OnPicked?.Invoke(this);
             return true;
@@ -139,26 +139,26 @@ namespace PlaceableObject
 
         private void OnDestroy()
         {
-            _gridInteraction.CleanupOnDestroy(CurrentPosition, State == PlaceableObjectState.Placed);
+            gridInteraction.CleanupOnDestroy(CurrentPosition, State == PlaceableObjectState.Placed);
             OnDestroyed?.Invoke(this);
         }
 
         private void UpdatePlacementVisualState()
         {
-            var canBePlaced = _gridInteraction.CanPlace(CurrentPosition);
+            var canBePlaced = gridInteraction.CanPlace(CurrentPosition);
             _colorController?.SetState(canBePlaced
                 ? PlaceableObjectVisualState.Default
                 : PlaceableObjectVisualState.InvalidPlacement);
         }
 
-        protected abstract void DefineShape(PlaceableObjectShape shape);
+        protected abstract void DefineShape(Shape shape);
 
         public void EnsureShapeInitialized()
         {
             if (Shape != null)
                 return;
 
-            Shape = ScriptableObject.CreateInstance<PlaceableObjectShape>();
+            Shape = ScriptableObject.CreateInstance<Shape>();
             DefineShape(Shape);
         }
     }

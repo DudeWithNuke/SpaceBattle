@@ -17,9 +17,7 @@ namespace PlaceableObjectManipulation
             if (!prefab)
                 return null;
 
-            var spawnPosition = _spawnPositionResolver != null
-                ? _spawnPositionResolver.ResolveSpawnPosition(_cursorPlane, targetCamera)
-                : Vector3.zero;
+            var spawnPosition = _spawnPositionResolver.ResolveSpawnPosition(_cursorPlane, targetCamera);
 
             var instance = Instantiate(prefab, spawnPosition, Quaternion.identity);
             if (!instance)

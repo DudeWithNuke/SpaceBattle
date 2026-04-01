@@ -1,17 +1,11 @@
 ﻿using PlaceableObject;
 using UnityEngine;
 
-namespace PlaceableObjectManipulation
+namespace PlaceableObjectManipulation.Interaction
 {
     public class Picking
     {
-        private readonly StateCoordinator _stateCoordinator;
         private readonly RaycastHit[] _raycastResults = new RaycastHit[16];
-
-        public Picking(StateCoordinator stateCoordinator)
-        {
-            _stateCoordinator = stateCoordinator;
-        }
 
         public bool TryPickClosest(Ray ray)
         {
@@ -36,7 +30,7 @@ namespace PlaceableObjectManipulation
                 closestObject = placeableObject;
             }
 
-            return _stateCoordinator != null && closestObject && _stateCoordinator.TryPick(closestObject);
+            return closestObject && closestObject.TryPick();
         }
     }
 }

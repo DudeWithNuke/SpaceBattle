@@ -26,16 +26,12 @@ namespace InputController
             if (!Input.GetKeyUp(KeyCode.X))
                 return;
 
-            if (_selection)
-                _selection.DestroyCurrentPickedObject();
+            _selection.DestroyCurrentPickedObject();
         }
 
         private void HandleLeftClick()
         {
             if (!Input.GetMouseButtonUp(0))
-                return;
-
-            if (!_selection)
                 return;
 
             if (_selection.CurrentPickedObject)

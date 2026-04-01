@@ -24,7 +24,7 @@ namespace PlaceableObject
         public string DisplayName => displayName;
     }
 
-    public class PlaceableObjectUiProfile : MonoBehaviour
+    public class UiProfile : MonoBehaviour
     {
         [SerializeField] private Sprite icon;
         [SerializeField] private string displayName;

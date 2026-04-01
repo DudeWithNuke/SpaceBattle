@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace PlaceableObject
+namespace PlaceableObject.Ships
 {
     public class Ship : PlaceableObject
     {
@@ -12,7 +12,7 @@ namespace PlaceableObject
 
         protected override PlaceableObjectDeploymentSide DeploymentSide => PlaceableObjectDeploymentSide.OwnField;
 
-        protected override void DefineShape(PlaceableObjectShape shape)
+        protected override void DefineShape(Shape shape)
         {
             for (var x = 0; x < 2; x++)
             for (var y = 0; y < 2; y++)

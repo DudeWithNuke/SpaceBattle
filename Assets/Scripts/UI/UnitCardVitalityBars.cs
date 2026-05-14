@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using PlaceableObject;
 using PlaceableObject.Ships;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,9 +30,8 @@ namespace UI
             if (!ship)
                 return;
 
-            ship.EnsureShapeInitialized();
-            var healthCount = ship.Shape != null ? ship.Shape.GetIntactCellsCount() : 0;
-            SetHealthPoints(healthCount);
+            SetHealthPoints(ship.Health);
+            SetEnergyPoints(ship.Energy);
         }
 
         public void SetHealthPoints(int count)

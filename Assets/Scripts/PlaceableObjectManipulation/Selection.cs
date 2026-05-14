@@ -1,6 +1,7 @@
 using System;
 using GameBoard;
 using PlaceableObjectManipulation.Interaction;
+using PlayerCamera;
 using Reflex.Attributes;
 using UI;
 using UI.Animation;
@@ -22,9 +23,12 @@ namespace PlaceableObjectManipulation
 
         [Inject] private Moving _moving;
         [Inject] private CursorPlane _cursorPlane;
+        [Inject] private CameraMovement _cameraMovement;
 
         public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
         private Picking _picker;
+        private bool _listSwitchValueBeforeForcedOff;
+        private bool _isListSwitchForcedOff;
 
         private void Awake()
         {
@@ -37,7 +41,9 @@ namespace PlaceableObjectManipulation
             buttonsController.OnObjectSpawned += OnObjectSpawned;
             
             listSwitch.OnValueChanged += HandleListSwitchChanged;
-            HandleListSwitchChanged(listSwitch.IsOn);
+            _cameraMovement.OnBattlefieldSideChanged += HandleBattlefieldSideChanged;
+            _listSwitchValueBeforeForcedOff = listSwitch.IsOn;
+            HandleBattlefieldSideChanged(_cameraMovement.IsPlayerBattlefieldActive);
         }
 
         private void OnDestroy()
@@ -47,6 +53,7 @@ namespace PlaceableObjectManipulation
             lifecycleTracker.OnPlaced -= OnPlaced;
             lifecycleTracker.OnDestroyed -= OnPlaceableObjectDestroyed;
             listSwitch.OnValueChanged -= HandleListSwitchChanged;
+            _cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
         }
 
         private void OnObjectSpawned(PlaceableObject.PlaceableObject placeableObject)
@@ -61,6 +68,29 @@ namespace PlaceableObjectManipulation
         {
             var showPlacedObjects = listSwitchOnShowsPlaced ? isOn : !isOn;
             buttonsController.SetShowPlacedObjects(showPlacedObjects);
+        }
+
+        private void HandleBattlefieldSideChanged(bool isPlayerBattlefieldActive)
+        {
+            if (!isPlayerBattlefieldActive)
+            {
+                _listSwitchValueBeforeForcedOff = listSwitch.IsOn;
+                _isListSwitchForcedOff = true;
+                listSwitch.SetValue(false, false);
+                listSwitch.SetInteractable(false);
+                buttonsController.SetShowPlacedObjects(true);
+                return;
+            }
+
+            listSwitch.SetInteractable(true);
+            if (_isListSwitchForcedOff)
+            {
+                _isListSwitchForcedOff = false;
+                listSwitch.SetValue(_listSwitchValueBeforeForcedOff, true);
+                return;
+            }
+
+            HandleListSwitchChanged(listSwitch.IsOn);
         }
 
         private void OnPicked(PlaceableObject.PlaceableObject placeableObject)

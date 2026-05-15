@@ -60,6 +60,12 @@ namespace UI
             actionSelector.SetBattlefield(isPlayerBattlefieldActive);
         }
 
+        public void SetInteractionEnabled(bool isEnabled)
+        {
+            mainButton.interactable = isEnabled;
+            actionSelector.SetInteractionEnabled(isEnabled);
+        }
+
         private void SubscribeToComponents()
         {
             deploymentController.OnShipSpawnRequested += (ctrl, ship) => OnSpawnRequested?.Invoke(this, ship);

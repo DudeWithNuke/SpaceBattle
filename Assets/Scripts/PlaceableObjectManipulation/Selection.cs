@@ -27,8 +27,8 @@ namespace PlaceableObjectManipulation
 
         public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
         private Picking _picker;
-        private bool _listSwitchValueBeforeForcedOff;
-        private bool _isListSwitchForcedOff;
+        private bool _listSwitchValueBeforeEnemyField;
+        private bool _isListSwitchLockedByEnemyField;
 
         private void Awake()
         {
@@ -41,8 +41,8 @@ namespace PlaceableObjectManipulation
             buttonsController.OnObjectSpawned += OnObjectSpawned;
             
             listSwitch.OnValueChanged += HandleListSwitchChanged;
+            HandleListSwitchChanged(listSwitch.IsOn);
             _cameraMovement.OnBattlefieldSideChanged += HandleBattlefieldSideChanged;
-            _listSwitchValueBeforeForcedOff = listSwitch.IsOn;
             HandleBattlefieldSideChanged(_cameraMovement.IsPlayerBattlefieldActive);
         }
 
@@ -74,23 +74,21 @@ namespace PlaceableObjectManipulation
         {
             if (!isPlayerBattlefieldActive)
             {
-                _listSwitchValueBeforeForcedOff = listSwitch.IsOn;
-                _isListSwitchForcedOff = true;
-                listSwitch.SetValue(false, false);
+                _listSwitchValueBeforeEnemyField = listSwitch.IsOn;
+                _isListSwitchLockedByEnemyField = true;
+
+                listSwitch.SetValue(listSwitchOnShowsPlaced, false);
                 listSwitch.SetInteractable(false);
                 buttonsController.SetShowPlacedObjects(true);
                 return;
             }
 
             listSwitch.SetInteractable(true);
-            if (_isListSwitchForcedOff)
-            {
-                _isListSwitchForcedOff = false;
-                listSwitch.SetValue(_listSwitchValueBeforeForcedOff, true);
+            if (!_isListSwitchLockedByEnemyField)
                 return;
-            }
 
-            HandleListSwitchChanged(listSwitch.IsOn);
+            _isListSwitchLockedByEnemyField = false;
+            listSwitch.SetValue(_listSwitchValueBeforeEnemyField, true);
         }
 
         private void OnPicked(PlaceableObject.PlaceableObject placeableObject)

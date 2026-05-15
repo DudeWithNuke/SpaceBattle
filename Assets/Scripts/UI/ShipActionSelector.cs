@@ -21,6 +21,7 @@ namespace UI
         private Ship _currentShip;
         private SelectedActionType _selectedAction = SelectedActionType.None;
         private bool _isPlayerBattlefieldActive = true;
+        private bool _isInteractionEnabled = true;
         private bool _isUpdatingToggles;
         private UnityAction<bool> _slot1ToggleChanged;
         private UnityAction<bool> _slot2ToggleChanged;
@@ -70,6 +71,12 @@ namespace UI
             UpdateInteractability();
         }
 
+        public void SetInteractionEnabled(bool isEnabled)
+        {
+            _isInteractionEnabled = isEnabled;
+            UpdateInteractability();
+        }
+
         public void SelectStandardAttack()
         {
             SelectAction(SelectedActionType.StandardAttack);
@@ -107,7 +114,7 @@ namespace UI
 
         private void UpdateInteractability()
         {
-            var canSelect = _currentShip && _currentShip.State == PlaceableObjectState.Placed;
+            var canSelect = _isInteractionEnabled && _currentShip && _currentShip.State == PlaceableObjectState.Placed;
 
             SetToggleInteractable(abilityToggleSlot1, canSelect && IsAbilityAvailable(0));
             SetToggleInteractable(abilityToggleSlot2, canSelect && IsAbilityAvailable(1));
@@ -149,6 +156,9 @@ namespace UI
 
         private Ability GetAbility(int slotIndex)
         {
+            if (!_currentShip)
+                return null;
+
             return slotIndex switch
             {
                 0 => _currentShip.UnitAbility,
@@ -164,6 +174,9 @@ namespace UI
 
         private bool IsAbilityAllowedOnCurrentField(PlaceableObject.PlaceableObject ability)
         {
+            if (!ability)
+                return false;
+
             return _isPlayerBattlefieldActive
                 ? ability.AllowedDeploymentSide == PlaceableObjectDeploymentSide.OwnField
                 : ability.AllowedDeploymentSide == PlaceableObjectDeploymentSide.EnemyField;

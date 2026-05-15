@@ -183,8 +183,6 @@ namespace PlaceableObjectManipulation
 
         private void RefreshButtonsForBattlefield(bool isPlayerBattlefieldActive)
         {
-            var showPlacedOnly = ShouldShowPlacedOnly(isPlayerBattlefieldActive);
-
             foreach (var binding in _buttonBindings)
             {
                 var button = binding.Button;
@@ -192,7 +190,7 @@ namespace PlaceableObjectManipulation
                     continue;
 
                 button.SetAbilityBattlefield(isPlayerBattlefieldActive);
-                button.gameObject.SetActive(IsButtonVisible(binding, isPlayerBattlefieldActive, showPlacedOnly));
+                button.gameObject.SetActive(IsButtonVisible(binding));
             }
 
             if (_currentSelectedPlaceableObject &&
@@ -208,27 +206,12 @@ namespace PlaceableObjectManipulation
             EnableAllButtons();
         }
 
-        private static bool IsPrefabAllowedForBattlefield(PlaceableObject.PlaceableObject placeableObject, bool isPlayerBattlefieldActive)
+        private bool IsButtonVisible(ButtonBinding binding)
         {
-            return isPlayerBattlefieldActive
-                ? placeableObject.AllowedDeploymentSide == PlaceableObjectDeploymentSide.OwnField
-                : placeableObject.AllowedDeploymentSide == PlaceableObjectDeploymentSide.EnemyField;
-        }
-
-        private bool IsButtonVisible(ButtonBinding binding, bool isPlayerBattlefieldActive, bool showPlacedOnly)
-        {
-            if (showPlacedOnly)
+            if (_showPlacedObjects)
                 return IsPlaced(binding.Button.Instance);
 
-            if (!IsPrefabAllowedForBattlefield(binding.Prefab, isPlayerBattlefieldActive))
-                return false;
-
-            return _showPlacedObjects ? IsPlaced(binding.Button.Instance) : !IsPlaced(binding.Button.Instance);
-        }
-
-        private bool ShouldShowPlacedOnly(bool isPlayerBattlefieldActive)
-        {
-            return !isPlayerBattlefieldActive || _showPlacedObjects;
+            return !IsPlaced(binding.Button.Instance);
         }
 
         private static bool IsPlaced(Ship ship)

@@ -19,6 +19,8 @@ namespace PlaceableObjectManipulation
         private readonly Dictionary<PlaceableObject.PlaceableObject, PlaceableObject.PlaceableObject> _activeAbilities = new();
         private readonly Dictionary<PlaceableObject.PlaceableObject, Ability> _activeAbilityPrefabs = new();
         private readonly Dictionary<PlaceableObject.PlaceableObject, AbilityOwner> _abilityOwners = new();
+        private readonly Dictionary<PlaceableObject.PlaceableObject, UI.ShipButton> _abilityOwnerButtons = new();
+        private readonly HashSet<UI.ShipButton> _shipButtons = new();
 
         private bool _isPlayerBattlefieldActive = true;
 
@@ -34,6 +36,8 @@ namespace PlaceableObjectManipulation
 
         private void Awake()
         {
+            lifecycleTracker.OnPicked += HandleTrackedObjectPicked;
+            lifecycleTracker.OnPlaced += HandleTrackedObjectPlaced;
             lifecycleTracker.OnDestroyed += HandleTrackedObjectDestroyed;
             _isPlayerBattlefieldActive = cameraMovement.IsPlayerBattlefieldActive;
             cameraMovement.OnBattlefieldSideChanged += HandleBattlefieldSideChanged;
@@ -42,6 +46,8 @@ namespace PlaceableObjectManipulation
         private void OnDestroy()
         {
             cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
+            lifecycleTracker.OnPicked -= HandleTrackedObjectPicked;
+            lifecycleTracker.OnPlaced -= HandleTrackedObjectPlaced;
             lifecycleTracker.OnDestroyed -= HandleTrackedObjectDestroyed;
         }
 
@@ -51,7 +57,9 @@ namespace PlaceableObjectManipulation
                 return;
 
             shipButton.OnActionSelectionChanged += HandleActionSelectionChanged;
+            _shipButtons.Add(shipButton);
             shipButton.SetAbilityBattlefield(_isPlayerBattlefieldActive);
+            RefreshShipButtonsInteraction();
         }
 
         public void UnregisterShipButton(UI.ShipButton shipButton)
@@ -60,11 +68,13 @@ namespace PlaceableObjectManipulation
                 return;
 
             shipButton.OnActionSelectionChanged -= HandleActionSelectionChanged;
+            _shipButtons.Remove(shipButton);
         }
 
         private void HandleBattlefieldSideChanged(bool isPlayerBattlefieldActive)
         {
             _isPlayerBattlefieldActive = isPlayerBattlefieldActive;
+            RefreshShipButtonsInteraction();
         }
 
         private void HandleActionSelectionChanged(UI.ShipButton shipButton, UI.SelectedActionType selectedAction)
@@ -83,14 +93,19 @@ namespace PlaceableObjectManipulation
                 return;
             if (!IsAllowedForCurrentBattlefield(abilityPrefab))
                 return;
+            if (HasPlacedAbilityForSide(abilityPrefab.AllowedDeploymentSide))
+                return;
 
-            SpawnOrReplaceActiveAbility(shipInstance, abilityPrefab);
+            SpawnOrReplaceActiveAbility(shipButton, shipInstance, abilityPrefab);
         }
 
-        private void SpawnOrReplaceActiveAbility(PlaceableObject.PlaceableObject shipInstance, Ability abilityPrefab)
+        private void SpawnOrReplaceActiveAbility(UI.ShipButton shipButton, PlaceableObject.PlaceableObject shipInstance, Ability abilityPrefab)
         {
             if (_activeAbilities.TryGetValue(shipInstance, out var activeAbility) && activeAbility)
             {
+                if (activeAbility.State == PlaceableObjectState.Placed)
+                    return;
+
                 if (activeAbility.State == PlaceableObjectState.Picked &&
                     _activeAbilityPrefabs.TryGetValue(shipInstance, out var activePrefab) &&
                     activePrefab == abilityPrefab)
@@ -110,6 +125,7 @@ namespace PlaceableObjectManipulation
             _activeAbilities[shipInstance] = abilityInstance;
             _activeAbilityPrefabs[shipInstance] = abilityPrefab;
             _abilityOwners[abilityInstance] = new AbilityOwner(shipInstance);
+            _abilityOwnerButtons[abilityInstance] = shipButton;
 
             OnAbilitySpawned?.Invoke(abilityInstance);
         }
@@ -137,12 +153,34 @@ namespace PlaceableObjectManipulation
                 return;
 
             _abilityOwners.Remove(destroyedObject);
+            SetOwnerButtonInteraction(destroyedObject, true);
+            _abilityOwnerButtons.Remove(destroyedObject);
 
             if (_activeAbilities.TryGetValue(owner.ShipInstance, out var activeAbility) && activeAbility == destroyedObject)
             {
                 _activeAbilities.Remove(owner.ShipInstance);
                 _activeAbilityPrefabs.Remove(owner.ShipInstance);
             }
+
+            RefreshShipButtonsInteraction();
+        }
+
+        private void HandleTrackedObjectPlaced(PlaceableObject.PlaceableObject placedObject)
+        {
+            if (!_abilityOwners.ContainsKey(placedObject))
+                return;
+
+            SetOwnerButtonInteraction(placedObject, false);
+            RefreshShipButtonsInteraction();
+        }
+
+        private void HandleTrackedObjectPicked(PlaceableObject.PlaceableObject pickedObject)
+        {
+            if (!_abilityOwners.ContainsKey(pickedObject))
+                return;
+
+            SetOwnerButtonInteraction(pickedObject, true);
+            RefreshShipButtonsInteraction();
         }
 
         private void RemoveAbilitiesOwnedByShip(PlaceableObject.PlaceableObject shipInstance)
@@ -156,6 +194,45 @@ namespace PlaceableObjectManipulation
 
             foreach (var staleAbility in staleAbilities)
                 _abilityOwners.Remove(staleAbility);
+        }
+
+        private void SetOwnerButtonInteraction(PlaceableObject.PlaceableObject abilityInstance, bool isEnabled)
+        {
+            if (!_abilityOwnerButtons.TryGetValue(abilityInstance, out var ownerButton) || !ownerButton)
+                return;
+
+            ownerButton.SetInteractionEnabled(isEnabled);
+        }
+
+        private void RefreshShipButtonsInteraction()
+        {
+            var activeSide = _isPlayerBattlefieldActive
+                ? PlaceableObjectDeploymentSide.OwnField
+                : PlaceableObjectDeploymentSide.EnemyField;
+            var isBlocked = HasPlacedAbilityForSide(activeSide);
+
+            foreach (var shipButton in _shipButtons)
+            {
+                if (!shipButton)
+                    continue;
+
+                shipButton.SetInteractionEnabled(!isBlocked);
+            }
+        }
+
+        private bool HasPlacedAbilityForSide(PlaceableObjectDeploymentSide deploymentSide)
+        {
+            foreach (var abilityInstance in _abilityOwners.Keys)
+            {
+                if (!abilityInstance)
+                    continue;
+                if (abilityInstance.State != PlaceableObjectState.Placed)
+                    continue;
+                if (abilityInstance.AllowedDeploymentSide == deploymentSide)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool IsAllowedForCurrentBattlefield(PlaceableObject.PlaceableObject placeableObject)

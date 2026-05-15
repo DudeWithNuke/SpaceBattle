@@ -28,6 +28,8 @@ namespace UI
         [Header("Main Button")]
         [SerializeField] private Button mainButton;
 
+        private bool _isInteractionEnabled = true;
+
         public Ship Prefab => deploymentController.ShipPrefab;
         public Ship Instance => deploymentController.ShipInstance;
         public SelectedActionType SelectedAction => actionSelector.SelectedAction;
@@ -39,20 +41,27 @@ namespace UI
             //cardView.SetShip(prefab);
 
             SubscribeToComponents();
-            mainButton.onClick.AddListener(HandleMainClick);
-            DisableNavigation(mainButton);
+            if (mainButton)
+            {
+                mainButton.onClick.AddListener(HandleMainClick);
+                DisableNavigation(mainButton);
+            }
+
+            RefreshInteractability();
         }
 
         public void BindInstance(Ship instance)
         {
             deploymentController.BindInstance(instance);
             actionSelector.SetShip(instance);
+            RefreshInteractability();
         }
 
         public void ReleaseInstance()
         {
             deploymentController.ReleaseInstance();
             actionSelector.Clear();
+            RefreshInteractability();
         }
 
         public void SetAbilityBattlefield(bool isPlayerBattlefieldActive)
@@ -62,8 +71,9 @@ namespace UI
 
         public void SetInteractionEnabled(bool isEnabled)
         {
-            mainButton.interactable = isEnabled;
+            _isInteractionEnabled = isEnabled;
             actionSelector.SetInteractionEnabled(isEnabled);
+            RefreshInteractability();
         }
 
         private void SubscribeToComponents()
@@ -84,33 +94,40 @@ namespace UI
             if (!state.HasValue || state.Value == PlaceableObjectState.Stored)
             {
                 deploymentController.RequestSpawn();
-                return;
-            }
-
-            if (state.Value == PlaceableObjectState.Placed)
-            {
-                actionSelector.SubmitStandardAttack();
-            }
-            else if (state.Value == PlaceableObjectState.Picked)
-            {
-                deploymentController.RequestPick();
             }
         }
 
         private void HandleShipPlaced(ShipDeploymentController controller)
         {
             actionSelector.SelectStandardAttack();
+            RefreshInteractability();
         }
 
         private void HandleShipPicked(ShipDeploymentController controller)
         {
             actionSelector.ResetSelection();
+            RefreshInteractability();
         }
 
         private void HandleShipDestroyed(ShipDeploymentController controller)
         {
             actionSelector.ResetSelection();
             //cardView.Clear();
+            RefreshInteractability();
+        }
+
+        private void RefreshInteractability()
+        {
+            if (!mainButton)
+                return;
+
+            mainButton.interactable = _isInteractionEnabled && IsStored();
+        }
+
+        private bool IsStored()
+        {
+            var state = deploymentController.CurrentState;
+            return !state.HasValue || state.Value == PlaceableObjectState.Stored;
         }
 
         private static void DisableNavigation(Selectable selectable)
@@ -122,7 +139,8 @@ namespace UI
 
         private void OnDestroy()
         {
-            mainButton.onClick.RemoveListener(HandleMainClick);
+            if (mainButton)
+                mainButton.onClick.RemoveListener(HandleMainClick);
         }
     }
 }

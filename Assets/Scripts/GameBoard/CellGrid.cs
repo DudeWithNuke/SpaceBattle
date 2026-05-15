@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace GameBoard
@@ -11,11 +12,11 @@ namespace GameBoard
         [field: SerializeField] public Vector3 EnemyOrigin { get; set; }
         [field: SerializeField] public Vector3Int GridSize { get; set; }
 
-        public List<Cell> PlayerCells { get; private set; }
+        private List<Cell> PlayerCells { get; set; }
         private Dictionary<Vector3Int, Cell> _playerCellMap;
         private HashSet<Vector3Int> _playerOccupiedCells;
 
-        public List<Cell> EnemyCells { get; private set; }
+        private List<Cell> EnemyCells { get; set; }
         private Dictionary<Vector3Int, Cell> _enemyCellMap;
         private HashSet<Vector3Int> _enemyOccupiedCells;
         
@@ -82,11 +83,7 @@ namespace GameBoard
         public bool CanOccupyCells(IEnumerable<Vector3Int> positions, bool isPlayerCell)
         {
             var occupiedCells = isPlayerCell ? _playerOccupiedCells : _enemyOccupiedCells;
-            foreach (var position in positions)
-                if (occupiedCells.Contains(position))
-                    return false;
-
-            return true;
+            return positions.All(position => !occupiedCells.Contains(position));
         }
 
         public void OccupyCells(IEnumerable<Vector3Int> positions, bool isPlayerCell)

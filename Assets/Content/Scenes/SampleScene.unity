@@ -6456,7 +6456,7 @@ GameObject:
   - component: {fileID: 2000652911}
   - component: {fileID: 2000652912}
   m_Layer: 5
-  m_Name: Reserve Ships List
+  m_Name: Ships List
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

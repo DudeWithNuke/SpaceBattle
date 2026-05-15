@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Factions;
 using PlaceableObject.Ships;
 using UnityEngine;
@@ -20,12 +21,8 @@ namespace Fleet
             {
                 var count = 0;
 
-                for (var i = 0; i < ships.Count; i++)
+                foreach (var ship in ships.Where(ship => ship))
                 {
-                    var ship = ships[i];
-                    if (!ship)
-                        continue;
-
                     ship.EnsureShapeInitialized();
                     count += ship.Shape.occupiedOffsets.Count;
                 }

@@ -13,29 +13,34 @@ namespace UI
     {
         public event Action<ShipActionSelector, SelectedActionType> OnSelectionChanged;
 
+        [SerializeField] private Button defaultAbilityButton;
         [FormerlySerializedAs("abilityButtonSlot1")]
-        [SerializeField] private Toggle abilityToggleSlot1;
+        [FormerlySerializedAs("abilityToggleSlot1")]
+        [SerializeField] private Button abilityButtonSlot1;
         [FormerlySerializedAs("abilityButtonSlot2")]
-        [SerializeField] private Toggle abilityToggleSlot2;
+        [FormerlySerializedAs("abilityToggleSlot2")]
+        [SerializeField] private Button abilityButtonSlot2;
 
         private Ship _currentShip;
         private SelectedActionType _selectedAction = SelectedActionType.None;
         private bool _isPlayerBattlefieldActive = true;
         private bool _isInteractionEnabled = true;
-        private bool _isUpdatingToggles;
-        private UnityAction<bool> _slot1ToggleChanged;
-        private UnityAction<bool> _slot2ToggleChanged;
+        private UnityAction _defaultAbilityClicked;
+        private UnityAction _slot1AbilityClicked;
+        private UnityAction _slot2AbilityClicked;
 
         public SelectedActionType SelectedAction => _selectedAction;
         public Ship CurrentShip => _currentShip;
 
         private void Awake()
         {
-            _slot1ToggleChanged = isOn => HandleToggleChanged(0, isOn);
-            _slot2ToggleChanged = isOn => HandleToggleChanged(1, isOn);
+            _defaultAbilityClicked = SubmitStandardAttack;
+            _slot1AbilityClicked = () => SubmitAbility(0);
+            _slot2AbilityClicked = () => SubmitAbility(1);
 
-            ConfigureToggle(abilityToggleSlot1, _slot1ToggleChanged);
-            ConfigureToggle(abilityToggleSlot2, _slot2ToggleChanged);
+            ConfigureButton(defaultAbilityButton, _defaultAbilityClicked);
+            ConfigureButton(abilityButtonSlot1, _slot1AbilityClicked);
+            ConfigureButton(abilityButtonSlot2, _slot2AbilityClicked);
         }
 
         public void SetShip(Ship ship)
@@ -84,27 +89,17 @@ namespace UI
 
         public void SubmitStandardAttack()
         {
-            if (_selectedAction == SelectedActionType.StandardAttack)
-            {
-                OnSelectionChanged?.Invoke(this, SelectedActionType.StandardAttack);
-                return;
-            }
-
-            SelectStandardAttack();
+            SubmitAction(SelectedActionType.StandardAttack);
         }
 
-        private void ToggleAbility(int slotIndex)
+        private void SubmitAbility(int slotIndex)
         {
             var ability = GetAbility(slotIndex);
             if (!IsAbilityAllowedOnCurrentField(ability))
                 return;
 
             var targetAction = slotIndex == 0 ? SelectedActionType.AbilitySlot1 : SelectedActionType.AbilitySlot2;
-
-            if (_selectedAction == targetAction)
-                SelectStandardAttack();
-            else
-                SelectAction(targetAction);
+            SubmitAction(targetAction);
         }
 
         public void ResetSelection()
@@ -116,8 +111,24 @@ namespace UI
         {
             var canSelect = _isInteractionEnabled && _currentShip && _currentShip.State == PlaceableObjectState.Placed;
 
-            SetToggleInteractable(abilityToggleSlot1, canSelect && IsAbilityAvailable(0));
-            SetToggleInteractable(abilityToggleSlot2, canSelect && IsAbilityAvailable(1));
+            SetButtonActive(defaultAbilityButton, canSelect);
+            SetButtonActive(abilityButtonSlot1, canSelect);
+            SetButtonActive(abilityButtonSlot2, canSelect);
+
+            SetButtonInteractable(defaultAbilityButton, canSelect && IsAbilityAllowedOnCurrentField(_currentShip.DefaultAbility));
+            SetButtonInteractable(abilityButtonSlot1, canSelect && IsAbilityAvailable(0));
+            SetButtonInteractable(abilityButtonSlot2, canSelect && IsAbilityAvailable(1));
+        }
+
+        private void SubmitAction(SelectedActionType actionType)
+        {
+            if (_selectedAction == actionType)
+            {
+                OnSelectionChanged?.Invoke(this, actionType);
+                return;
+            }
+
+            SelectAction(actionType);
         }
 
         private void SelectAction(SelectedActionType actionType)
@@ -126,32 +137,16 @@ namespace UI
                 return;
 
             _selectedAction = actionType;
-            RefreshToggleStates();
             OnSelectionChanged?.Invoke(this, actionType);
         }
 
-        private void ConfigureToggle(Toggle toggle, UnityAction<bool> handler)
+        private void ConfigureButton(Button button, UnityAction handler)
         {
-            toggle.onValueChanged.AddListener(handler);
-
-            DisableNavigation(toggle);
-        }
-
-        private void HandleToggleChanged(int slotIndex, bool isOn)
-        {
-            if (_isUpdatingToggles)
+            if (!button)
                 return;
 
-            if (isOn)
-            {
-                ToggleAbility(slotIndex);
-                RefreshToggleStates();
-                return;
-            }
-
-            var actionType = slotIndex == 0 ? SelectedActionType.AbilitySlot1 : SelectedActionType.AbilitySlot2;
-            if (_selectedAction == actionType)
-                SelectStandardAttack();
+            button.onClick.AddListener(handler);
+            DisableNavigation(button);
         }
 
         private Ability GetAbility(int slotIndex)
@@ -182,20 +177,20 @@ namespace UI
                 : ability.AllowedDeploymentSide == PlaceableObjectDeploymentSide.EnemyField;
         }
 
-        private void RefreshToggleStates()
+        private static void SetButtonInteractable(Button button, bool interactable)
         {
-            _isUpdatingToggles = true;
+            if (!button)
+                return;
 
-            abilityToggleSlot1.SetIsOnWithoutNotify(_selectedAction == SelectedActionType.AbilitySlot1);
-
-            abilityToggleSlot2.SetIsOnWithoutNotify(_selectedAction == SelectedActionType.AbilitySlot2);
-
-            _isUpdatingToggles = false;
+            button.interactable = interactable;
         }
 
-        private static void SetToggleInteractable(Toggle toggle, bool interactable)
+        private static void SetButtonActive(Button button, bool isActive)
         {
-            toggle.interactable = interactable;
+            if (!button)
+                return;
+
+            button.enabled = isActive;
         }
 
         private static void DisableNavigation(Selectable selectable)
@@ -207,9 +202,14 @@ namespace UI
 
         private void OnDestroy()
         {
-            abilityToggleSlot1.onValueChanged.RemoveListener(_slot1ToggleChanged);
+            if (defaultAbilityButton)
+                defaultAbilityButton.onClick.RemoveListener(_defaultAbilityClicked);
 
-            abilityToggleSlot2.onValueChanged.RemoveListener(_slot2ToggleChanged);
+            if (abilityButtonSlot1)
+                abilityButtonSlot1.onClick.RemoveListener(_slot1AbilityClicked);
+
+            if (abilityButtonSlot2)
+                abilityButtonSlot2.onClick.RemoveListener(_slot2AbilityClicked);
         }
     }
 }

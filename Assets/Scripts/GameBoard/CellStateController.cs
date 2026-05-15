@@ -18,7 +18,7 @@ namespace GameBoard
     {
         private readonly Renderer _renderer;
         public CellState CurrentState { get; private set; }
-        public CellState PreviousState { get; private set; }
+        private CellState PreviousState { get; set; }
 
         public CellStateController(Renderer renderer)
         {

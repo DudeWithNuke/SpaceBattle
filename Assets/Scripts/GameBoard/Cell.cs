@@ -68,6 +68,10 @@ namespace GameBoard
                 case CellState.Selected:
                     _stateController.SetState(CellState.HoveredSelected);
                     break;
+                case CellState.Hovered:
+                case CellState.HoveredSelected:
+                case CellState.EmptyAttacked:
+                case CellState.ShipAttacked:
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -83,6 +87,14 @@ namespace GameBoard
                 case CellState.HoveredSelected:
                     _stateController.SetState(CellState.Selected);
                     break;
+                case CellState.DisabledLayer:
+                case CellState.ActiveLayer:
+                case CellState.Selected:
+                case CellState.EmptyAttacked:
+                case CellState.ShipAttacked:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 

@@ -6,12 +6,13 @@ using PlaceableObject.Ships;
 using PlayerCamera;
 using Reflex.Attributes;
 using UI;
+using UI.UnitCard;
 using UnityEngine;
 
 namespace PlaceableObjectManipulation
 {
     [RequireComponent(typeof(Spawning))]
-    public class ButtonsController : MonoBehaviour
+    public class FleetPanelController : MonoBehaviour
     {
         public event Action<PlaceableObject.PlaceableObject> OnObjectSpawned;
 
@@ -23,12 +24,12 @@ namespace PlaceableObjectManipulation
         [SerializeField] private AbilityPlacementController abilityPlacementController;
         [SerializeField] private Canvas buttonCanvas;
 
-        private readonly List<ShipButton> _shipButtons = new();
-        private readonly Dictionary<PlaceableObject.PlaceableObject, ShipButton> _objectToButton = new();
+        private readonly List<UnitCardController> _shipButtons = new();
+        private readonly Dictionary<PlaceableObject.PlaceableObject, UnitCardController> _objectToButton = new();
         private readonly List<ButtonBinding> _buttonBindings = new();
 
         private Transform _buttonPanel;
-        private ShipButton _buttonPrefab;
+        private UnitCardController _buttonPrefab;
         private PlaceableObject.PlaceableObject _currentSelectedPlaceableObject;
         private bool _isPlayerBattlefieldActive = true;
         private bool _showPlacedObjects;
@@ -37,16 +38,16 @@ namespace PlaceableObjectManipulation
         private readonly struct ButtonBinding
         {
             public readonly PlaceableObject.PlaceableObject Prefab;
-            public readonly ShipButton Button;
+            public readonly UnitCardController Button;
 
-            public ButtonBinding(PlaceableObject.PlaceableObject prefab, ShipButton button)
+            public ButtonBinding(PlaceableObject.PlaceableObject prefab, UnitCardController button)
             {
                 Prefab = prefab;
                 Button = button;
             }
         }
 
-        public void Initialize(Transform buttonPanel, ShipButton buttonPrefab)
+        public void Initialize(Transform buttonPanel, UnitCardController buttonPrefab)
         {
             if (_isInitialized)
                 return;
@@ -128,26 +129,26 @@ namespace PlaceableObjectManipulation
             }
         }
 
-        private void SubscribeButton(ShipButton shipButton)
+        private void SubscribeButton(UnitCardController unitCardController)
         {
-            if (shipButton == null)
+            if (unitCardController == null)
                 return;
 
-            shipButton.OnSpawnRequested += HandleSpawnRequested;
-            shipButton.OnPickRequested += HandlePickRequested;
+            unitCardController.OnSpawnRequested += HandleSpawnRequested;
+            unitCardController.OnPickRequested += HandlePickRequested;
         }
 
-        private void UnsubscribeButton(ShipButton shipButton)
+        private void UnsubscribeButton(UnitCardController unitCardController)
         {
-            if (shipButton == null)
+            if (unitCardController == null)
                 return;
 
-            abilityPlacementController.UnregisterShipButton(shipButton);
-            shipButton.OnSpawnRequested -= HandleSpawnRequested;
-            shipButton.OnPickRequested -= HandlePickRequested;
+            abilityPlacementController.UnregisterShipButton(unitCardController);
+            unitCardController.OnSpawnRequested -= HandleSpawnRequested;
+            unitCardController.OnPickRequested -= HandlePickRequested;
         }
 
-        private void HandleSpawnRequested(ShipButton sourceButton, Ship prefab)
+        private void HandleSpawnRequested(UnitCardController sourceButton, Ship prefab)
         {
             if (sourceButton == null || prefab == null)
                 return;
@@ -167,7 +168,7 @@ namespace PlaceableObjectManipulation
             OnObjectSpawned?.Invoke(instance);
         }
 
-        private static void HandlePickRequested(ShipButton _, Ship ship)
+        private static void HandlePickRequested(UnitCardController _, Ship ship)
         {
             if (!ship)
                 return;
@@ -183,21 +184,20 @@ namespace PlaceableObjectManipulation
 
         private void RefreshButtonsForBattlefield(bool isPlayerBattlefieldActive)
         {
+            var isInteractionBlockedByAbility = abilityPlacementController.IsShipInteractionBlocked();
+
             foreach (var binding in _buttonBindings)
             {
                 var button = binding.Button;
                 if (!button)
                     continue;
 
+                button.SetInteractionEnabled(!isInteractionBlockedByAbility);
                 button.SetAbilityBattlefield(isPlayerBattlefieldActive);
                 button.gameObject.SetActive(IsButtonVisible(binding));
             }
 
-            if (_currentSelectedPlaceableObject &&
-                _objectToButton.TryGetValue(_currentSelectedPlaceableObject, out var sourceButton) &&
-                sourceButton != null &&
-                sourceButton.gameObject != null &&
-                sourceButton.gameObject.activeSelf)
+            if (_currentSelectedPlaceableObject is Ship)
             {
                 DisableAllButtonsExcept(_currentSelectedPlaceableObject);
                 return;
@@ -241,14 +241,29 @@ namespace PlaceableObjectManipulation
 
         private void DisableAllButtonsExcept(PlaceableObject.PlaceableObject placeableObject)
         {
-            // Interaction disabled via ShipDeploymentController events
-            // This method is kept for future extension but currently does nothing
+            if (placeableObject is not Ship)
+                return;
+
+            _objectToButton.TryGetValue(placeableObject, out var activeButton);
+
+            foreach (var shipButton in _shipButtons)
+            {
+                if (!shipButton)
+                    continue;
+
+                shipButton.SetPickedShipInteractionBlocked(shipButton != activeButton);
+            }
         }
 
         private void EnableAllButtons()
         {
-            // Interaction enabled via ShipDeploymentController events
-            // This method is kept for future extension but currently does nothing
+            foreach (var shipButton in _shipButtons)
+            {
+                if (!shipButton)
+                    continue;
+
+                shipButton.SetPickedShipInteractionBlocked(false);
+            }
         }
     }
 }

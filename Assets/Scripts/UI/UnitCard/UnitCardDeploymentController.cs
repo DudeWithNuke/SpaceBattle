@@ -3,15 +3,15 @@ using PlaceableObject;
 using PlaceableObject.Ships;
 using UnityEngine;
 
-namespace UI
+namespace UI.UnitCard
 {
-    public class ShipDeploymentController : MonoBehaviour
+    public class UnitCardDeploymentController : MonoBehaviour
     {
-        public event Action<ShipDeploymentController, Ship> OnShipSpawnRequested;
-        public event Action<ShipDeploymentController, Ship> OnShipPickRequested;
-        public event Action<ShipDeploymentController> OnShipPlaced;
-        public event Action<ShipDeploymentController> OnShipPicked;
-        public event Action<ShipDeploymentController> OnShipDestroyed;
+        public event Action<UnitCardDeploymentController, Ship> OnShipSpawnRequested;
+        public event Action<UnitCardDeploymentController, Ship> OnShipPickRequested;
+        public event Action<UnitCardDeploymentController> OnShipPlaced;
+        public event Action<UnitCardDeploymentController> OnShipPicked;
+        public event Action<UnitCardDeploymentController> OnShipDestroyed;
 
         public Ship ShipPrefab { get; private set; }
 

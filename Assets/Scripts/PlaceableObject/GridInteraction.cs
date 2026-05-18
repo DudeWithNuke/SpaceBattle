@@ -1,5 +1,4 @@
 using GameBoard;
-using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using UnityEngine;
 
@@ -120,7 +119,7 @@ namespace PlaceableObject
         private bool IsWithinGridBounds(Vector3Int position)
         {
             var occupiedCells = GetOccupiedCells(position);
-            return GridCoordinateUtility.AreWithinGridBounds(_cellGrid, occupiedCells);
+            return CoordinateUtility.AreWithinGridBounds(_cellGrid, occupiedCells);
         }
 
         private Vector3Int[] GetOccupiedCells(Vector3Int position)

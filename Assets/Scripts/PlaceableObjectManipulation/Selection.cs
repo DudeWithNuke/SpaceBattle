@@ -3,22 +3,22 @@ using GameBoard;
 using PlaceableObjectManipulation.Interaction;
 using PlayerCamera;
 using Reflex.Attributes;
-using UI;
 using UI.Animation;
+using UI.UnitCard;
 using UnityEngine;
 
 namespace PlaceableObjectManipulation
 {
-    [RequireComponent(typeof(ButtonsController))]
+    [RequireComponent(typeof(FleetPanelController))]
     public class Selection : MonoBehaviour
     {
         public event Action<PlaceableObject.PlaceableObject> OnStateChanged;
 
         [SerializeField] private Transform buttonPanel;
-        [SerializeField] private ShipButton buttonPrefab;
+        [SerializeField] private UnitCardController buttonPrefab;
         [SerializeField] private ListSwitch listSwitch;
         [SerializeField] private bool listSwitchOnShowsPlaced = true;
-        [SerializeField] private ButtonsController buttonsController;
+        [SerializeField] private FleetPanelController fleetPanelController;
         [SerializeField] private SpawnedObjectLifecycleTracker lifecycleTracker;
 
         [Inject] private Moving _moving;
@@ -37,8 +37,8 @@ namespace PlaceableObjectManipulation
             lifecycleTracker.OnPlaced += OnPlaced;
             lifecycleTracker.OnDestroyed += OnPlaceableObjectDestroyed;
 
-            buttonsController.Initialize(buttonPanel, buttonPrefab);
-            buttonsController.OnObjectSpawned += OnObjectSpawned;
+            fleetPanelController.Initialize(buttonPanel, buttonPrefab);
+            fleetPanelController.OnObjectSpawned += OnObjectSpawned;
             
             listSwitch.OnValueChanged += HandleListSwitchChanged;
             HandleListSwitchChanged(listSwitch.IsOn);
@@ -48,7 +48,7 @@ namespace PlaceableObjectManipulation
 
         private void OnDestroy()
         {
-            buttonsController.OnObjectSpawned -= OnObjectSpawned;
+            fleetPanelController.OnObjectSpawned -= OnObjectSpawned;
             lifecycleTracker.OnPicked -= OnPicked;
             lifecycleTracker.OnPlaced -= OnPlaced;
             lifecycleTracker.OnDestroyed -= OnPlaceableObjectDestroyed;
@@ -67,7 +67,7 @@ namespace PlaceableObjectManipulation
         private void HandleListSwitchChanged(bool isOn)
         {
             var showPlacedObjects = listSwitchOnShowsPlaced ? isOn : !isOn;
-            buttonsController.SetShowPlacedObjects(showPlacedObjects);
+            fleetPanelController.SetShowPlacedObjects(showPlacedObjects);
         }
 
         private void HandleBattlefieldSideChanged(bool isPlayerBattlefieldActive)
@@ -79,7 +79,7 @@ namespace PlaceableObjectManipulation
 
                 listSwitch.SetValue(listSwitchOnShowsPlaced, false);
                 listSwitch.SetInteractable(false);
-                buttonsController.SetShowPlacedObjects(true);
+                fleetPanelController.SetShowPlacedObjects(true);
                 return;
             }
 
@@ -94,7 +94,7 @@ namespace PlaceableObjectManipulation
         private void OnPicked(PlaceableObject.PlaceableObject placeableObject)
         {
             CurrentPickedObject = placeableObject;
-            buttonsController.HandleObjectPicked(placeableObject);
+            fleetPanelController.HandleObjectPicked(placeableObject);
             OnStateChanged?.Invoke(placeableObject);
         }
 
@@ -103,7 +103,7 @@ namespace PlaceableObjectManipulation
             if (CurrentPickedObject == placeableObject)
                 CurrentPickedObject = null;
 
-            buttonsController.HandleSelectionCleared();
+            fleetPanelController.HandleSelectionCleared();
             OnStateChanged?.Invoke(null);
         }
 
@@ -113,7 +113,7 @@ namespace PlaceableObjectManipulation
                 return;
             
             CurrentPickedObject = null;
-            buttonsController.HandleSelectionCleared();
+            fleetPanelController.HandleSelectionCleared();
             OnStateChanged?.Invoke(null);
         }
 

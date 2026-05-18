@@ -1,4 +1,4 @@
-﻿﻿using GameBoard;
+﻿using GameBoard;
 using UnityEngine;
 
 namespace PlaceableObjectManipulation

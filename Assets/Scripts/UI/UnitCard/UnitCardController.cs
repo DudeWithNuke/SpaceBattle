@@ -4,31 +4,33 @@ using PlaceableObject.Ships;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI
+namespace UI.UnitCard
 {
     public enum SelectedActionType
     {
         None,
-        StandardAttack,
-        AbilitySlot1,
-        AbilitySlot2
+        Default,
+        Ship,
+        Faction
     }
 
-    public class ShipButton : MonoBehaviour
+    public class UnitCardController : MonoBehaviour
     {
-        public event Action<ShipButton, Ship> OnSpawnRequested;
-        public event Action<ShipButton, Ship> OnPickRequested;
-        public event Action<ShipButton, SelectedActionType> OnActionSelectionChanged;
+        public event Action<UnitCardController, Ship> OnSpawnRequested;
+        public event Action<UnitCardController, Ship> OnPickRequested;
+        public event Action<UnitCardController, SelectedActionType> OnActionSelectionChanged;
 
         [Header("Components")]
         //[SerializeField] private ShipCardView cardView;
-        [SerializeField] private ShipActionSelector actionSelector;
-        [SerializeField] private ShipDeploymentController deploymentController;
+        [SerializeField] private UnitCardActionSelector actionSelector;
+        [SerializeField] private UnitCardDeploymentController deploymentController;
 
         [Header("Main Button")]
         [SerializeField] private Button mainButton;
+        [SerializeField] private GameObject background;
 
         private bool _isInteractionEnabled = true;
+        private bool _isPickedShipInteractionBlocked;
 
         public Ship Prefab => deploymentController.ShipPrefab;
         public Ship Instance => deploymentController.ShipInstance;
@@ -72,7 +74,14 @@ namespace UI
         public void SetInteractionEnabled(bool isEnabled)
         {
             _isInteractionEnabled = isEnabled;
-            actionSelector.SetInteractionEnabled(isEnabled);
+            actionSelector.SetInteractionEnabled(IsInteractionAllowed());
+            RefreshInteractability();
+        }
+
+        public void SetPickedShipInteractionBlocked(bool isBlocked)
+        {
+            _isPickedShipInteractionBlocked = isBlocked;
+            actionSelector.SetInteractionEnabled(IsInteractionAllowed());
             RefreshInteractability();
         }
 
@@ -97,19 +106,19 @@ namespace UI
             }
         }
 
-        private void HandleShipPlaced(ShipDeploymentController controller)
+        private void HandleShipPlaced(UnitCardDeploymentController controller)
         {
-            actionSelector.SelectStandardAttack();
+            actionSelector.SelectDefaultAttack();
             RefreshInteractability();
         }
 
-        private void HandleShipPicked(ShipDeploymentController controller)
+        private void HandleShipPicked(UnitCardDeploymentController controller)
         {
             actionSelector.ResetSelection();
             RefreshInteractability();
         }
 
-        private void HandleShipDestroyed(ShipDeploymentController controller)
+        private void HandleShipDestroyed(UnitCardDeploymentController controller)
         {
             actionSelector.ResetSelection();
             //cardView.Clear();
@@ -118,16 +127,29 @@ namespace UI
 
         private void RefreshInteractability()
         {
+            if (background)
+                background.SetActive(!IsPlaced());
+
             if (!mainButton)
                 return;
 
-            mainButton.interactable = _isInteractionEnabled && IsStored();
+            mainButton.interactable = IsInteractionAllowed() && IsStored();
+        }
+
+        private bool IsInteractionAllowed()
+        {
+            return _isInteractionEnabled && !_isPickedShipInteractionBlocked;
         }
 
         private bool IsStored()
         {
             var state = deploymentController.CurrentState;
-            return !state.HasValue || state.Value == PlaceableObjectState.Stored;
+            return state is null or PlaceableObjectState.Stored;
+        }
+
+        private bool IsPlaced()
+        {
+            return deploymentController.CurrentState == PlaceableObjectState.Placed;
         }
 
         private static void DisableNavigation(Selectable selectable)

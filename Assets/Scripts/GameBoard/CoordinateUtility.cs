@@ -1,9 +1,8 @@
-using GameBoard;
 using UnityEngine;
 
-namespace PlaceableObjectManipulation
+namespace GameBoard
 {
-    public static class GridCoordinateUtility
+    public static class CoordinateUtility
     {
         public static Vector3 GetOrigin(CellGrid cellGrid, bool isPlayerObject)
         {

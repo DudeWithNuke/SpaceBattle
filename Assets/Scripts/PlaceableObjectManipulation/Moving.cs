@@ -209,7 +209,7 @@ namespace PlaceableObjectManipulation
 
         private Vector3 ClampWorldPositionToCursorPlaneRange(Vector3 worldPosition)
         {
-            var origin = GridCoordinateUtility.GetOrigin(_cellGrid, _placeableObject.IsPlayerObject);
+            var origin = CoordinateUtility.GetOrigin(_cellGrid, _placeableObject.IsPlayerObject);
             var additionalRange = placeableObjectSettings.additionalMovementRange;
             var halfAdditionalRange = additionalRange * 0.5f;
             var minX = origin.x - halfAdditionalRange;
@@ -226,7 +226,7 @@ namespace PlaceableObjectManipulation
 
         private Vector3Int WorldToCellPosition(Vector3 worldPosition)
         {
-            return GridCoordinateUtility.WorldToCellPosition(
+            return CoordinateUtility.WorldToCellPosition(
                 _cellGrid,
                 _placeableObject.IsPlayerObject,
                 worldPosition,
@@ -236,7 +236,7 @@ namespace PlaceableObjectManipulation
 
         private Vector3 CellToWorldPosition(Vector3Int cellPosition)
         {
-            return GridCoordinateUtility.CellToWorldPosition(
+            return CoordinateUtility.CellToWorldPosition(
                 _cellGrid,
                 _placeableObject.IsPlayerObject,
                 cellPosition,
@@ -245,7 +245,7 @@ namespace PlaceableObjectManipulation
 
         private bool IsWithinGridBounds(Vector3Int cellPosition)
         {
-            return GridCoordinateUtility.IsWithinGridBounds(_cellGrid, cellPosition);
+            return CoordinateUtility.IsWithinGridBounds(_cellGrid, cellPosition);
         }
 
         private void UpdateMovingState()

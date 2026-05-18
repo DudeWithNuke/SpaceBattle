@@ -58,9 +58,8 @@ namespace PlaceableObject.Ships
         {
             var totalBonus = 0f;
 
-            for (var i = 0; i < modifiers.Count; i++)
+            foreach (var modifier in modifiers)
             {
-                var modifier = modifiers[i];
                 if (modifier == null)
                     continue;
 
@@ -74,9 +73,8 @@ namespace PlaceableObject.Ships
         {
             var totalBonus = 0;
 
-            for (var i = 0; i < modifiers.Count; i++)
+            foreach (var modifier in modifiers)
             {
-                var modifier = modifiers[i];
                 if (modifier == null)
                     continue;
 

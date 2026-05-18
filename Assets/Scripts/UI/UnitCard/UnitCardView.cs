@@ -2,9 +2,9 @@ using PlaceableObject.Ships;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI
+namespace UI.UnitCard
 {
-    public class ShipCardView : MonoBehaviour
+    public class UnitCardView : MonoBehaviour
     {
         [SerializeField] private Image iconImage;
         [SerializeField] private UnitCardStatsBars statsBars;

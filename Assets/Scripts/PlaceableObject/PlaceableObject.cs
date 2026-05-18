@@ -1,6 +1,5 @@
 ﻿using System;
 using GameBoard;
-using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using ScriptableObjects;
 using UnityEngine;
@@ -80,7 +79,7 @@ namespace PlaceableObject
 
         private Vector3Int WorldToCellPosition(Vector3 worldPosition)
         {
-            return GridCoordinateUtility.WorldToCellPosition(
+            return CoordinateUtility.WorldToCellPosition(
                 _cellGrid,
                 IsPlayerObject,
                 worldPosition,

@@ -4,58 +4,52 @@ using PlaceableObject.Abilities;
 using PlaceableObject.Ships;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
-namespace UI
+namespace UI.UnitCard
 {
-    public class ShipActionSelector : MonoBehaviour
+    public class UnitCardActionSelector : MonoBehaviour
     {
-        public event Action<ShipActionSelector, SelectedActionType> OnSelectionChanged;
+        public event Action<UnitCardActionSelector, SelectedActionType> OnSelectionChanged;
 
         [SerializeField] private Button defaultAbilityButton;
-        [FormerlySerializedAs("abilityButtonSlot1")]
-        [FormerlySerializedAs("abilityToggleSlot1")]
-        [SerializeField] private Button abilityButtonSlot1;
-        [FormerlySerializedAs("abilityButtonSlot2")]
-        [FormerlySerializedAs("abilityToggleSlot2")]
-        [SerializeField] private Button abilityButtonSlot2;
+        [SerializeField] private Button shipAbilityButton;
+        [SerializeField] private Button factionAbilityButton;
 
-        private Ship _currentShip;
-        private SelectedActionType _selectedAction = SelectedActionType.None;
         private bool _isPlayerBattlefieldActive = true;
         private bool _isInteractionEnabled = true;
         private UnityAction _defaultAbilityClicked;
-        private UnityAction _slot1AbilityClicked;
-        private UnityAction _slot2AbilityClicked;
+        private UnityAction _shipAbilityClicked;
+        private UnityAction _factionAbilityClicked;
 
-        public SelectedActionType SelectedAction => _selectedAction;
-        public Ship CurrentShip => _currentShip;
+        public SelectedActionType SelectedAction { get; private set; } = SelectedActionType.None;
+
+        public Ship CurrentShip { get; private set; }
 
         private void Awake()
         {
-            _defaultAbilityClicked = SubmitStandardAttack;
-            _slot1AbilityClicked = () => SubmitAbility(0);
-            _slot2AbilityClicked = () => SubmitAbility(1);
+            _defaultAbilityClicked = SubmitDefaultAttack;
+            _shipAbilityClicked = () => SubmitAbility(0);
+            _factionAbilityClicked = () => SubmitAbility(1);
 
             ConfigureButton(defaultAbilityButton, _defaultAbilityClicked);
-            ConfigureButton(abilityButtonSlot1, _slot1AbilityClicked);
-            ConfigureButton(abilityButtonSlot2, _slot2AbilityClicked);
+            ConfigureButton(shipAbilityButton, _shipAbilityClicked);
+            ConfigureButton(factionAbilityButton, _factionAbilityClicked);
         }
 
         public void SetShip(Ship ship)
         {
-            if (_currentShip == ship)
+            if (CurrentShip == ship)
                 return;
 
-            _currentShip = ship;
+            CurrentShip = ship;
             ResetSelection();
             UpdateInteractability();
         }
 
         public void Clear()
         {
-            _currentShip = null;
+            CurrentShip = null;
             ResetSelection();
             UpdateInteractability();
         }
@@ -64,13 +58,13 @@ namespace UI
         {
             _isPlayerBattlefieldActive = isPlayerBattlefieldActive;
 
-            if (_selectedAction == SelectedActionType.AbilitySlot1 || _selectedAction == SelectedActionType.AbilitySlot2)
+            if (SelectedAction == SelectedActionType.Ship || SelectedAction == SelectedActionType.Faction)
             {
-                var slotIndex = _selectedAction == SelectedActionType.AbilitySlot1 ? 0 : 1;
+                var slotIndex = SelectedAction == SelectedActionType.Ship ? 0 : 1;
                 var ability = GetAbility(slotIndex);
 
                 if (ability && !IsAbilityAllowedOnCurrentField(ability))
-                    SelectStandardAttack();
+                    SelectDefaultAttack();
             }
 
             UpdateInteractability();
@@ -82,14 +76,14 @@ namespace UI
             UpdateInteractability();
         }
 
-        public void SelectStandardAttack()
+        public void SelectDefaultAttack()
         {
-            SelectAction(SelectedActionType.StandardAttack);
+            SelectAction(SelectedActionType.Default);
         }
 
-        public void SubmitStandardAttack()
+        public void SubmitDefaultAttack()
         {
-            SubmitAction(SelectedActionType.StandardAttack);
+            SubmitAction(SelectedActionType.Default);
         }
 
         private void SubmitAbility(int slotIndex)
@@ -98,7 +92,7 @@ namespace UI
             if (!IsAbilityAllowedOnCurrentField(ability))
                 return;
 
-            var targetAction = slotIndex == 0 ? SelectedActionType.AbilitySlot1 : SelectedActionType.AbilitySlot2;
+            var targetAction = slotIndex == 0 ? SelectedActionType.Ship : SelectedActionType.Faction;
             SubmitAction(targetAction);
         }
 
@@ -109,20 +103,20 @@ namespace UI
 
         private void UpdateInteractability()
         {
-            var canSelect = _isInteractionEnabled && _currentShip && _currentShip.State == PlaceableObjectState.Placed;
+            var canSelect = _isInteractionEnabled && CurrentShip && CurrentShip.State == PlaceableObjectState.Placed;
 
             SetButtonActive(defaultAbilityButton, canSelect);
-            SetButtonActive(abilityButtonSlot1, canSelect);
-            SetButtonActive(abilityButtonSlot2, canSelect);
+            SetButtonActive(shipAbilityButton, canSelect);
+            SetButtonActive(factionAbilityButton, canSelect);
 
-            SetButtonInteractable(defaultAbilityButton, canSelect && IsAbilityAllowedOnCurrentField(_currentShip.DefaultAbility));
-            SetButtonInteractable(abilityButtonSlot1, canSelect && IsAbilityAvailable(0));
-            SetButtonInteractable(abilityButtonSlot2, canSelect && IsAbilityAvailable(1));
+            SetButtonInteractable(defaultAbilityButton, canSelect && IsAbilityAllowedOnCurrentField(CurrentShip.DefaultAbility));
+            SetButtonInteractable(shipAbilityButton, canSelect && IsAbilityAvailable(0));
+            SetButtonInteractable(factionAbilityButton, canSelect && IsAbilityAvailable(1));
         }
 
         private void SubmitAction(SelectedActionType actionType)
         {
-            if (_selectedAction == actionType)
+            if (SelectedAction == actionType)
             {
                 OnSelectionChanged?.Invoke(this, actionType);
                 return;
@@ -133,14 +127,14 @@ namespace UI
 
         private void SelectAction(SelectedActionType actionType)
         {
-            if (_selectedAction == actionType)
+            if (SelectedAction == actionType)
                 return;
 
-            _selectedAction = actionType;
+            SelectedAction = actionType;
             OnSelectionChanged?.Invoke(this, actionType);
         }
 
-        private void ConfigureButton(Button button, UnityAction handler)
+        private static void ConfigureButton(Button button, UnityAction handler)
         {
             if (!button)
                 return;
@@ -151,13 +145,13 @@ namespace UI
 
         private Ability GetAbility(int slotIndex)
         {
-            if (!_currentShip)
+            if (!CurrentShip)
                 return null;
 
             return slotIndex switch
             {
-                0 => _currentShip.UnitAbility,
-                1 => _currentShip.FactionAbility,
+                0 => CurrentShip.UnitAbility,
+                1 => CurrentShip.FactionAbility,
                 _ => null
             };
         }
@@ -205,11 +199,11 @@ namespace UI
             if (defaultAbilityButton)
                 defaultAbilityButton.onClick.RemoveListener(_defaultAbilityClicked);
 
-            if (abilityButtonSlot1)
-                abilityButtonSlot1.onClick.RemoveListener(_slot1AbilityClicked);
+            if (shipAbilityButton)
+                shipAbilityButton.onClick.RemoveListener(_shipAbilityClicked);
 
-            if (abilityButtonSlot2)
-                abilityButtonSlot2.onClick.RemoveListener(_slot2AbilityClicked);
+            if (factionAbilityButton)
+                factionAbilityButton.onClick.RemoveListener(_factionAbilityClicked);
         }
     }
 }

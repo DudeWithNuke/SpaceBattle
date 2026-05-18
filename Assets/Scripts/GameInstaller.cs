@@ -12,7 +12,7 @@ public class GameInstaller : MonoBehaviour, IInstaller
     [SerializeField] private Selection selection;
     [SerializeField] private Moving moving;
     [SerializeField] private Spawning spawning;
-    [SerializeField] private SpawnPositionResolver spawnPositionResolver = new();
+    [SerializeField] private SpawnPositionResolver spawnPositionResolver;
     [SerializeField] private ShipRoster shipRoster;
     [SerializeField] private CameraMovement cameraMovement;
     [SerializeField] private CameraInputController cameraInputController;

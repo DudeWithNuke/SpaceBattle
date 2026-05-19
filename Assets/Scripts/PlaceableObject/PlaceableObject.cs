@@ -29,6 +29,10 @@ namespace PlaceableObject
         public Shape Shape { get; private set; }
         public Vector3Int CurrentPosition { get; set; }
         public bool IsPlayerObject { get; private set; }
+        public string NetworkObjectId { get; private set; }
+        public string NetworkPrefabId { get; private set; }
+        public int OwnerPlayerIndex { get; private set; }
+        public bool SuppressNetworkPlacementEvent { get; private set; }
 
         public PlaceableObjectDeploymentSide AllowedDeploymentSide => DeploymentSide;
         protected abstract PlaceableObjectDeploymentSide DeploymentSide { get; }
@@ -36,6 +40,7 @@ namespace PlaceableObject
         protected virtual bool UsesCellOccupancy => true;
 
         private ColorController _colorController;
+        private bool? _isPlayerObjectOverride;
         private bool _isRuntimeInitialized;
         private bool _pendingTakeFromStorage;
 
@@ -53,7 +58,7 @@ namespace PlaceableObject
 
         private void Start()
         {
-            IsPlayerObject = DeploymentSide == PlaceableObjectDeploymentSide.OwnField;
+            IsPlayerObject = _isPlayerObjectOverride ?? DeploymentSide == PlaceableObjectDeploymentSide.OwnField;
             gridInteraction.Initialize(Shape, UsesCellOccupancy, IsPlayerObject);
             _colorController = new ColorController(GetComponentsInChildren<Renderer>(), placeableObjectSettings);
 
@@ -140,6 +145,39 @@ namespace PlaceableObject
         {
             gridInteraction.CleanupOnDestroy(CurrentPosition, State == PlaceableObjectState.Placed);
             OnDestroyed?.Invoke(this);
+        }
+
+        public void SetNetworkIdentity(string networkObjectId, string networkPrefabId, int ownerPlayerIndex, bool suppressPlacementEvent)
+        {
+            NetworkObjectId = networkObjectId;
+            NetworkPrefabId = networkPrefabId;
+            OwnerPlayerIndex = ownerPlayerIndex;
+            SuppressNetworkPlacementEvent = suppressPlacementEvent;
+        }
+
+        public void SetLocalPlayerObject(bool isPlayerObject)
+        {
+            _isPlayerObjectOverride = isPlayerObject;
+        }
+
+        public void ClearNetworkPlacementSuppression()
+        {
+            SuppressNetworkPlacementEvent = false;
+        }
+
+        public void ApplyLocalViewRotation180()
+        {
+            EnsureShapeInitialized();
+
+            for (var i = 0; i < Shape.occupiedOffsets.Count; i++)
+            {
+                var offset = Shape.occupiedOffsets[i];
+                offset.position = new Vector3Int(-offset.position.x, offset.position.y, -offset.position.z);
+                Shape.occupiedOffsets[i] = offset;
+            }
+
+            Shape.rootPoint = new Vector3Int(-Shape.rootPoint.x, Shape.rootPoint.y, -Shape.rootPoint.z);
+            transform.rotation = Quaternion.Euler(0f, 180f, 0f) * transform.rotation;
         }
 
         private void UpdatePlacementVisualState()

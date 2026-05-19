@@ -29,7 +29,9 @@ namespace UI.UnitCard
         [SerializeField] private Button mainButton;
         [SerializeField] private GameObject background;
 
-        private bool _isInteractionEnabled = true;
+        private CanvasGroup _canvasGroup;
+        private bool _isAbilityInteractionEnabled = true;
+        private bool _isTurnInteractionEnabled;
         private bool _isPickedShipInteractionBlocked;
 
         public Ship Prefab => deploymentController.ShipPrefab;
@@ -37,8 +39,15 @@ namespace UI.UnitCard
         public SelectedActionType SelectedAction => actionSelector.SelectedAction;
         public bool HasInstance => deploymentController.HasInstance;
 
+        private void Awake()
+        {
+            EnsureCanvasGroup();
+            ApplyCanvasInteractionState();
+        }
+
         public void Initialize(Ship prefab)
         {
+            EnsureCanvasGroup();
             deploymentController.Initialize(prefab);
             //cardView.SetShip(prefab);
 
@@ -73,7 +82,14 @@ namespace UI.UnitCard
 
         public void SetInteractionEnabled(bool isEnabled)
         {
-            _isInteractionEnabled = isEnabled;
+            _isAbilityInteractionEnabled = isEnabled;
+            actionSelector.SetInteractionEnabled(IsInteractionAllowed());
+            RefreshInteractability();
+        }
+
+        public void SetTurnInteractionEnabled(bool isEnabled)
+        {
+            _isTurnInteractionEnabled = isEnabled;
             actionSelector.SetInteractionEnabled(IsInteractionAllowed());
             RefreshInteractability();
         }
@@ -98,6 +114,9 @@ namespace UI.UnitCard
 
         private void HandleMainClick()
         {
+            if (!IsInteractionAllowed())
+                return;
+
             var state = deploymentController.CurrentState;
 
             if (!state.HasValue || state.Value == PlaceableObjectState.Stored)
@@ -127,6 +146,8 @@ namespace UI.UnitCard
 
         private void RefreshInteractability()
         {
+            ApplyCanvasInteractionState();
+
             if (background)
                 background.SetActive(!IsPlaced());
 
@@ -138,7 +159,28 @@ namespace UI.UnitCard
 
         private bool IsInteractionAllowed()
         {
-            return _isInteractionEnabled && !_isPickedShipInteractionBlocked;
+            return _isAbilityInteractionEnabled &&
+                   _isTurnInteractionEnabled &&
+                   !_isPickedShipInteractionBlocked;
+        }
+
+        private void EnsureCanvasGroup()
+        {
+            if (_canvasGroup)
+                return;
+
+            _canvasGroup = GetComponent<CanvasGroup>();
+            if (!_canvasGroup)
+                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        private void ApplyCanvasInteractionState()
+        {
+            EnsureCanvasGroup();
+
+            var isAllowed = IsInteractionAllowed();
+            _canvasGroup.interactable = isAllowed;
+            _canvasGroup.blocksRaycasts = isAllowed;
         }
 
         private bool IsStored()

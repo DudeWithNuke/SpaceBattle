@@ -3,10 +3,13 @@ using InputController;
 using PlaceableObjectManipulation;
 using PlayerCamera;
 using Reflex.Core;
+using UI.FleetPanel;
 using UnityEngine;
 
 public class GameInstaller : MonoBehaviour, IInstaller
 {
+    [SerializeField] private bool createNetworkBootstrapOnAwake = true;
+
     [SerializeField] private CellGrid cellGrid;
     [SerializeField] private CursorPlane cursorPlane;
     [SerializeField] private Selection selection;
@@ -18,6 +21,18 @@ public class GameInstaller : MonoBehaviour, IInstaller
     [SerializeField] private CameraInputController cameraInputController;
     [SerializeField] private BattlefieldInputController battlefieldInputController;
     [SerializeField] private CursorPlaneInputController cursorPlaneInputController;
+
+    private void Awake()
+    {
+        if (!createNetworkBootstrapOnAwake)
+            return;
+        if (FindFirstObjectByType<global::Network.NetworkBootstrap>())
+            return;
+
+        var networkBootstrapObject = new GameObject("NetworkBootstrap");
+        networkBootstrapObject.AddComponent<global::Network.NetworkBootstrap>();
+        DontDestroyOnLoad(networkBootstrapObject);
+    }
 
     public void InstallBindings(ContainerBuilder builder)
     {

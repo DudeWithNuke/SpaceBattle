@@ -10,6 +10,7 @@ namespace PlaceableObjectManipulation
     {
         [Inject] private SpawnPositionResolver _spawnPositionResolver;
         [Inject] private CursorPlane _cursorPlane;
+        [Inject] private CellGrid _cellGrid;
         [SerializeField] private Camera targetCamera;
 
         public PlaceableObject.PlaceableObject Spawn(PlaceableObject.PlaceableObject prefab)
@@ -18,7 +19,23 @@ namespace PlaceableObjectManipulation
                 return null;
 
             var spawnPosition = _spawnPositionResolver.ResolveSpawnPosition(_cursorPlane, targetCamera);
+            return Spawn(prefab, spawnPosition);
+        }
 
+        public PlaceableObject.PlaceableObject SpawnAtCell(PlaceableObject.PlaceableObject prefab, Vector3Int cellPosition, bool isPlayerObject)
+        {
+            if (!prefab)
+                return null;
+
+            var spawnPosition = CoordinateUtility.CellToWorldPosition(_cellGrid, isPlayerObject, cellPosition, 0.5f);
+            var instance = Spawn(prefab, spawnPosition);
+            if (instance)
+                instance.SetLocalPlayerObject(isPlayerObject);
+            return instance;
+        }
+
+        private PlaceableObject.PlaceableObject Spawn(PlaceableObject.PlaceableObject prefab, Vector3 spawnPosition)
+        {
             var instance = Instantiate(prefab, spawnPosition, Quaternion.identity);
             if (!instance)
                 return null;

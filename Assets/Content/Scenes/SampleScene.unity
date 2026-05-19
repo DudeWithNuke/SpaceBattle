@@ -2199,7 +2199,7 @@ MonoBehaviour:
   buttonPrefab: {fileID: 3646025903997374981, guid: 1080acc4d331d7947b4a231c37f4942b, type: 3}
   listSwitch: {fileID: 1001583043}
   listSwitchOnShowsPlaced: 1
-  buttonsController: {fileID: 445403123}
+  fleetPanelController: {fileID: 445403123}
   lifecycleTracker: {fileID: 445403126}
 --- !u!114 &445403126
 MonoBehaviour:
@@ -2279,6 +2279,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14b09f3db048e864b8e0ca66191ec4e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameInstaller
+  createNetworkBootstrapOnAwake: 1
   cellGrid: {fileID: 1629808314}
   cursorPlane: {fileID: 1980345878}
   selection: {fileID: 445403125}
@@ -6559,7 +6560,10 @@ MonoBehaviour:
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
-  enemyShips: []
+  enemyShips:
+  - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
+  - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
+  - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
 --- !u!1 &2012814406
 GameObject:
   m_ObjectHideFlags: 0

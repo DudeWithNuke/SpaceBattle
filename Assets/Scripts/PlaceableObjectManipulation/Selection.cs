@@ -27,6 +27,7 @@ namespace PlaceableObjectManipulation
 
         public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
         private Picking _picker;
+        private bool _isInteractionEnabled = true;
         private bool _listSwitchValueBeforeEnemyField;
         private bool _isListSwitchLockedByEnemyField;
 
@@ -119,6 +120,8 @@ namespace PlaceableObjectManipulation
 
         public bool TryPlaceCurrent()
         {
+            if (!_isInteractionEnabled)
+                return false;
             if (!CurrentPickedObject)
                 return false;
             if (_cursorPlane.IsTransitioning)
@@ -135,17 +138,38 @@ namespace PlaceableObjectManipulation
 
         public bool TryPickClosest(Ray ray)
         {
+            if (!_isInteractionEnabled)
+                return false;
+
             return !CurrentPickedObject && _picker.TryPickClosest(ray);
         }
 
         public bool DestroyCurrentPickedObject()
+        {
+            if (!_isInteractionEnabled)
+                return false;
+            if (!CurrentPickedObject)
+                return false;
+
+            ForceDestroyCurrentPickedObject();
+            return true;
+        }
+
+        public bool ForceDestroyCurrentPickedObject()
         {
             if (!CurrentPickedObject)
                 return false;
 
             Destroy(CurrentPickedObject.gameObject);
             CurrentPickedObject = null;
+            fleetPanelController.HandleSelectionCleared();
+            OnStateChanged?.Invoke(null);
             return true;
+        }
+
+        public void SetInteractionEnabled(bool isEnabled)
+        {
+            _isInteractionEnabled = isEnabled;
         }
     }
 }

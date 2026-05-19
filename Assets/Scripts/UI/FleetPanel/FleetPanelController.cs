@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Network;
 using PlaceableObject;
 using PlaceableObject.Ships;
 using PlayerCamera;
 using Reflex.Attributes;
 using UI;
+using UI.FleetPanel;
 using UI.UnitCard;
 using UnityEngine;
 
@@ -24,6 +26,7 @@ namespace PlaceableObjectManipulation
         [SerializeField] private AbilityPlacementController abilityPlacementController;
         [SerializeField] private Canvas buttonCanvas;
 
+        private NetworkPlayerContext _playerContext;
         private readonly List<UnitCardController> _shipButtons = new();
         private readonly Dictionary<PlaceableObject.PlaceableObject, UnitCardController> _objectToButton = new();
         private readonly List<ButtonBinding> _buttonBindings = new();
@@ -34,6 +37,7 @@ namespace PlaceableObjectManipulation
         private bool _isPlayerBattlefieldActive = true;
         private bool _showPlacedObjects;
         private bool _isInitialized;
+        private bool _isTurnInteractionEnabled;
 
         private readonly struct ButtonBinding
         {
@@ -60,6 +64,10 @@ namespace PlaceableObjectManipulation
             abilityPlacementController.OnAbilitySpawned += HandleAbilitySpawned;
 
             EnsureUiInteractionReady();
+            _playerContext = FindFirstObjectByType<NetworkPlayerContext>();
+            if (_playerContext)
+                _playerContext.OnLocalPlayerAssigned += HandleLocalPlayerAssigned;
+
             CreateButtons();
 
             _cameraMovement.OnBattlefieldSideChanged += HandleBattlefieldSideChanged;
@@ -90,6 +98,15 @@ namespace PlaceableObjectManipulation
             RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
         }
 
+        public void SetTurnInteractionEnabled(bool isEnabled)
+        {
+            if (_isTurnInteractionEnabled == isEnabled)
+                return;
+
+            _isTurnInteractionEnabled = isEnabled;
+            RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
+        }
+
         private void OnDestroy()
         {
             _cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
@@ -97,6 +114,8 @@ namespace PlaceableObjectManipulation
             lifecycleTracker.OnPlaced -= HandleInstanceStateChanged;
             lifecycleTracker.OnDestroyed -= HandleInstanceDestroyed;
             abilityPlacementController.OnAbilitySpawned -= HandleAbilitySpawned;
+            if (_playerContext)
+                _playerContext.OnLocalPlayerAssigned -= HandleLocalPlayerAssigned;
 
             foreach (var shipButton in _shipButtons)
                 UnsubscribeButton(shipButton);
@@ -113,7 +132,11 @@ namespace PlaceableObjectManipulation
 
         private void CreateButtons()
         {
-            foreach (var placeableObject in _shipRoster.GetAll())
+            var ships = _playerContext && _playerContext.HasAssignedPlayer
+                ? _shipRoster.GetForPlayer(_playerContext.LocalPlayerIndex)
+                : _shipRoster.GetAll();
+
+            foreach (var placeableObject in ships)
             {
                 if (!placeableObject)
                     continue;
@@ -127,6 +150,24 @@ namespace PlaceableObjectManipulation
                 _shipButtons.Add(shipButton);
                 _buttonBindings.Add(new ButtonBinding(placeableObject, shipButton));
             }
+
+            RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
+        }
+
+        private void RecreateButtons()
+        {
+            foreach (var shipButton in _shipButtons)
+            {
+                UnsubscribeButton(shipButton);
+                if (shipButton)
+                    Destroy(shipButton.gameObject);
+            }
+
+            _shipButtons.Clear();
+            _objectToButton.Clear();
+            _buttonBindings.Clear();
+            CreateButtons();
+            RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
         }
 
         private void SubscribeButton(UnitCardController unitCardController)
@@ -182,6 +223,11 @@ namespace PlaceableObjectManipulation
             RefreshButtonsForBattlefield(isPlayerBattlefieldActive);
         }
 
+        private void HandleLocalPlayerAssigned(int _)
+        {
+            RecreateButtons();
+        }
+
         private void RefreshButtonsForBattlefield(bool isPlayerBattlefieldActive)
         {
             var isInteractionBlockedByAbility = abilityPlacementController.IsShipInteractionBlocked();
@@ -193,6 +239,7 @@ namespace PlaceableObjectManipulation
                     continue;
 
                 button.SetInteractionEnabled(!isInteractionBlockedByAbility);
+                button.SetTurnInteractionEnabled(_isTurnInteractionEnabled);
                 button.SetAbilityBattlefield(isPlayerBattlefieldActive);
                 button.gameObject.SetActive(IsButtonVisible(binding));
             }

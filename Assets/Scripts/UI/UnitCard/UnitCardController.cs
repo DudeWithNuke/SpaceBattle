@@ -33,6 +33,7 @@ namespace UI.UnitCard
         private bool _isAbilityInteractionEnabled = true;
         private bool _isTurnInteractionEnabled;
         private bool _isPickedShipInteractionBlocked;
+        private bool _isBattlePhase;
 
         public Ship Prefab => deploymentController.ShipPrefab;
         public Ship Instance => deploymentController.ShipInstance;
@@ -42,7 +43,7 @@ namespace UI.UnitCard
         private void Awake()
         {
             EnsureCanvasGroup();
-            ApplyCanvasInteractionState();
+            ApplyCanvasInteractionState(GetAvailability());
         }
 
         public void Initialize(Ship prefab)
@@ -80,24 +81,27 @@ namespace UI.UnitCard
             actionSelector.SetBattlefield(isPlayerBattlefieldActive);
         }
 
-        public void SetInteractionEnabled(bool isEnabled)
+        public void SetAbilityInteractionEnabled(bool isEnabled)
         {
             _isAbilityInteractionEnabled = isEnabled;
-            actionSelector.SetInteractionEnabled(IsInteractionAllowed());
             RefreshInteractability();
         }
 
         public void SetTurnInteractionEnabled(bool isEnabled)
         {
             _isTurnInteractionEnabled = isEnabled;
-            actionSelector.SetInteractionEnabled(IsInteractionAllowed());
             RefreshInteractability();
         }
 
         public void SetPickedShipInteractionBlocked(bool isBlocked)
         {
             _isPickedShipInteractionBlocked = isBlocked;
-            actionSelector.SetInteractionEnabled(IsInteractionAllowed());
+            RefreshInteractability();
+        }
+
+        public void SetBattlePhase(bool isBattlePhase)
+        {
+            _isBattlePhase = isBattlePhase;
             RefreshInteractability();
         }
 
@@ -146,7 +150,9 @@ namespace UI.UnitCard
 
         private void RefreshInteractability()
         {
-            ApplyCanvasInteractionState();
+            var availability = GetAvailability();
+            ApplyCanvasInteractionState(availability);
+            actionSelector.SetInteractionEnabled(availability.CanUseActions);
 
             if (background)
                 background.SetActive(!IsPlaced());
@@ -154,7 +160,7 @@ namespace UI.UnitCard
             if (!mainButton)
                 return;
 
-            mainButton.interactable = IsInteractionAllowed() && IsStored();
+            mainButton.interactable = availability.CanUseMainButton;
         }
 
         private bool IsInteractionAllowed()
@@ -162,6 +168,16 @@ namespace UI.UnitCard
             return _isAbilityInteractionEnabled &&
                    _isTurnInteractionEnabled &&
                    !_isPickedShipInteractionBlocked;
+        }
+
+        private UnitCardAvailability GetAvailability()
+        {
+            var canInteract = IsInteractionAllowed();
+            var canUseMainButton = canInteract && !_isBattlePhase && IsStored();
+            var canUseActions = canInteract && _isBattlePhase && IsPlaced();
+            var blocksRaycasts = canUseMainButton || canUseActions;
+
+            return new UnitCardAvailability(blocksRaycasts, canUseMainButton, canUseActions);
         }
 
         private void EnsureCanvasGroup()
@@ -174,13 +190,12 @@ namespace UI.UnitCard
                 _canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
 
-        private void ApplyCanvasInteractionState()
+        private void ApplyCanvasInteractionState(UnitCardAvailability availability)
         {
             EnsureCanvasGroup();
 
-            var isAllowed = IsInteractionAllowed();
-            _canvasGroup.interactable = isAllowed;
-            _canvasGroup.blocksRaycasts = isAllowed;
+            _canvasGroup.interactable = availability.BlocksRaycasts;
+            _canvasGroup.blocksRaycasts = availability.BlocksRaycasts;
         }
 
         private bool IsStored()

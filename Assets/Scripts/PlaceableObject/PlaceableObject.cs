@@ -32,6 +32,7 @@ namespace PlaceableObject
         public string NetworkObjectId { get; private set; }
         public string NetworkPrefabId { get; private set; }
         public int OwnerPlayerIndex { get; private set; }
+        public int FieldOwnerPlayerIndex { get; private set; }
         public bool SuppressNetworkPlacementEvent { get; private set; }
 
         public PlaceableObjectDeploymentSide AllowedDeploymentSide => DeploymentSide;
@@ -41,6 +42,7 @@ namespace PlaceableObject
 
         private ColorController _colorController;
         private bool? _isPlayerObjectOverride;
+        private bool _showCellStateVisuals = true;
         private bool _isRuntimeInitialized;
         private bool _pendingTakeFromStorage;
 
@@ -59,7 +61,7 @@ namespace PlaceableObject
         private void Start()
         {
             IsPlayerObject = _isPlayerObjectOverride ?? DeploymentSide == PlaceableObjectDeploymentSide.OwnField;
-            gridInteraction.Initialize(Shape, UsesCellOccupancy, IsPlayerObject);
+            gridInteraction.Initialize(Shape, UsesCellOccupancy, IsPlayerObject, _showCellStateVisuals);
             _colorController = new ColorController(GetComponentsInChildren<Renderer>(), placeableObjectSettings);
 
             var startPos = transform.position;
@@ -152,12 +154,23 @@ namespace PlaceableObject
             NetworkObjectId = networkObjectId;
             NetworkPrefabId = networkPrefabId;
             OwnerPlayerIndex = ownerPlayerIndex;
+            FieldOwnerPlayerIndex = ownerPlayerIndex;
             SuppressNetworkPlacementEvent = suppressPlacementEvent;
+        }
+
+        public void SetNetworkFieldOwner(int fieldOwnerPlayerIndex)
+        {
+            FieldOwnerPlayerIndex = fieldOwnerPlayerIndex;
         }
 
         public void SetLocalPlayerObject(bool isPlayerObject)
         {
             _isPlayerObjectOverride = isPlayerObject;
+        }
+
+        public void SetCellStateVisualizationEnabled(bool isEnabled)
+        {
+            _showCellStateVisuals = isEnabled;
         }
 
         public void ClearNetworkPlacementSuppression()

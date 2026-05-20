@@ -28,6 +28,7 @@ namespace PlaceableObjectManipulation
         public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
         private Picking _picker;
         private bool _isInteractionEnabled = true;
+        private bool _canPickPlacedObjects = true;
         private bool _listSwitchValueBeforeEnemyField;
         private bool _isListSwitchLockedByEnemyField;
 
@@ -140,6 +141,8 @@ namespace PlaceableObjectManipulation
         {
             if (!_isInteractionEnabled)
                 return false;
+            if (!_canPickPlacedObjects)
+                return false;
 
             return !CurrentPickedObject && _picker.TryPickClosest(ray);
         }
@@ -170,6 +173,11 @@ namespace PlaceableObjectManipulation
         public void SetInteractionEnabled(bool isEnabled)
         {
             _isInteractionEnabled = isEnabled;
+        }
+
+        public void SetCanPickPlacedObjects(bool canPickPlacedObjects)
+        {
+            _canPickPlacedObjects = canPickPlacedObjects;
         }
     }
 }

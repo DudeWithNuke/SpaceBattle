@@ -72,7 +72,7 @@ namespace PlaceableObjectManipulation
             _shipButtons.Remove(unitCardController);
         }
 
-        public bool IsShipInteractionBlocked()
+        public bool IsShipInteractionBlockedByPlacedAbility()
         {
             return HasPlacedAbility();
         }
@@ -207,19 +207,19 @@ namespace PlaceableObjectManipulation
             if (!_abilityOwnerButtons.TryGetValue(abilityInstance, out var ownerButton) || !ownerButton)
                 return;
 
-            ownerButton.SetInteractionEnabled(isEnabled);
+            ownerButton.SetAbilityInteractionEnabled(isEnabled);
         }
 
         private void RefreshShipButtonsInteraction()
         {
-            var isBlocked = IsShipInteractionBlocked();
+            var isBlocked = IsShipInteractionBlockedByPlacedAbility();
 
             foreach (var shipButton in _shipButtons)
             {
                 if (!shipButton)
                     continue;
 
-                shipButton.SetInteractionEnabled(!isBlocked);
+                shipButton.SetAbilityInteractionEnabled(!isBlocked);
             }
         }
 

@@ -12,6 +12,7 @@ namespace PlaceableObject
         private Shape _shape;
         private bool _usesCellOccupancy;
         private bool _isPlayerObject;
+        private bool _showCellStateVisuals;
 
         private Vector3Int _cachedPosition;
         private Vector3Int[] _cachedOccupiedCells;
@@ -20,11 +21,12 @@ namespace PlaceableObject
         private Vector3Int[] _previousHoverCells;
         private Vector3Int[] _placedOccupiedCells;
 
-        public void Initialize(Shape shape, bool usesCellOccupancy, bool isPlayerObject)
+        public void Initialize(Shape shape, bool usesCellOccupancy, bool isPlayerObject, bool showCellStateVisuals)
         {
             _shape = shape;
             _usesCellOccupancy = usesCellOccupancy;
             _isPlayerObject = isPlayerObject;
+            _showCellStateVisuals = showCellStateVisuals;
             _cachedOccupiedCells = null;
             _previousHoverCells = null;
             _placedOccupiedCells = null;
@@ -51,6 +53,9 @@ namespace PlaceableObject
             ClearHover();
 
             if (!_usesCellOccupancy)
+                return;
+
+            if (!_showCellStateVisuals)
                 return;
             
             foreach (var cellPos in occupiedCells)
@@ -93,6 +98,9 @@ namespace PlaceableObject
             
             foreach (var cellPos in currentOccupiedCells)
             {
+                if (!_showCellStateVisuals)
+                    break;
+
                 var cell = _cellGrid.GetCell(cellPos, _isPlayerObject);
                 if (cell)
                     cell.SetPlaceableHover(true);
@@ -108,6 +116,9 @@ namespace PlaceableObject
 
             foreach (var cellPos in _previousHoverCells)
             {
+                if (!_showCellStateVisuals)
+                    break;
+
                 var cell = _cellGrid.GetCell(cellPos, _isPlayerObject);
                 if (cell)
                     cell.SetPlaceableHover(false);
@@ -140,6 +151,9 @@ namespace PlaceableObject
 
             foreach (var cellPos in occupiedCells)
             {
+                if (!_showCellStateVisuals)
+                    break;
+
                 var cell = _cellGrid.GetCell(cellPos, _isPlayerObject);
                 if (cell && _usesCellOccupancy)
                     cell.SetSelected(false, cell.Position.y == _cursorPlane.currentLayer);

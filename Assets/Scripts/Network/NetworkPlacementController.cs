@@ -32,109 +32,109 @@ namespace Network
         {
             ResolveDependencies();
 
-            if (lifecycleTracker)
-                lifecycleTracker.OnPlaced += HandleLocalObjectPlaced;
-
             if (matchController)
             {
-                matchController.OnShipPlaced += HandleShipPlaced;
-                matchController.OnAbilityPlaced += HandleAbilityPlaced;
+                matchController.OnFieldSnapshotReceived += HandleFieldSnapshotReceived;
             }
         }
 
         private void OnDisable()
         {
-            if (lifecycleTracker)
-                lifecycleTracker.OnPlaced -= HandleLocalObjectPlaced;
-
             if (matchController)
             {
-                matchController.OnShipPlaced -= HandleShipPlaced;
-                matchController.OnAbilityPlaced -= HandleAbilityPlaced;
+                matchController.OnFieldSnapshotReceived -= HandleFieldSnapshotReceived;
             }
         }
 
-        private void HandleLocalObjectPlaced(PlaceableObject.PlaceableObject placeableObject)
+        public FieldSnapshotDto CreateLocalFieldSnapshot(MatchPhase phase, int turnNumber)
         {
-            if (!placeableObject || placeableObject.SuppressNetworkPlacementEvent)
-                return;
             if (!playerContext || !playerContext.HasAssignedPlayer)
             {
-                Debug.LogWarning("[NetworkPlacementController] Local placement ignored. Local player is not assigned yet.");
-                return;
+                Debug.LogWarning("[NetworkPlacementController] Cannot create field snapshot. Local player is not assigned yet.");
+                return default;
             }
 
-            EnsureLocalIdentity(placeableObject);
-            _objectsById[placeableObject.NetworkObjectId] = placeableObject;
-
-            if (placeableObject is Ship)
+            var objects = new List<FieldObjectPlacedEventDto>();
+            foreach (var placeableObject in lifecycleTracker.TrackedObjects)
             {
-                Debug.Log($"[NetworkPlacementController] Submitting ship placement: {placeableObject.NetworkPrefabId} at {placeableObject.CurrentPosition}.");
-                matchController.SubmitShipPlacement(CreateShipPlacementRequest(placeableObject));
-                return;
+                if (!ShouldIncludeInLocalSnapshot(placeableObject))
+                    continue;
+
+                EnsureLocalIdentity(placeableObject);
+                var fieldOwnerPlayerIndex = GetFieldOwnerPlayerIndex(placeableObject);
+                placeableObject.SetNetworkFieldOwner(fieldOwnerPlayerIndex);
+                _objectsById[placeableObject.NetworkObjectId] = placeableObject;
+                objects.Add(CreateFieldObjectState(placeableObject, fieldOwnerPlayerIndex));
             }
 
-            if (placeableObject is Ability)
+            return new FieldSnapshotDto
             {
-                Debug.Log($"[NetworkPlacementController] Submitting ability placement: {placeableObject.NetworkPrefabId} at {placeableObject.CurrentPosition}.");
-                matchController.SubmitAbilityPlacement(CreateAbilityPlacementRequest(placeableObject));
-            }
+                ownerPlayerIndex = playerContext.LocalPlayerIndex,
+                phase = phase,
+                turnNumber = turnNumber,
+                objects = objects.ToArray()
+            };
         }
 
-        private void HandleShipPlaced(ShipPlacedEventDto evt)
+        public void SubmitLocalFieldSnapshot(MatchPhase phase, int turnNumber)
         {
-            if (ShouldSkipConfirmedLocalObject(evt.ownerPlayerIndex, evt.objectId))
+            var snapshot = CreateLocalFieldSnapshot(phase, turnNumber);
+            if (snapshot.ownerPlayerIndex <= 0)
+                return;
+
+            Debug.Log($"[NetworkPlacementController] Submitting field snapshot. Player{snapshot.ownerPlayerIndex}, Objects={snapshot.objects?.Length ?? 0}.");
+            matchController.SubmitFieldSnapshot(snapshot);
+        }
+
+        private void HandleFieldSnapshotReceived(FieldSnapshotDto snapshot)
+        {
+            if (snapshot.objects == null)
+                return;
+
+            RemoveStaleSnapshotObjects(snapshot);
+            foreach (var fieldObject in snapshot.objects)
+                HandleFieldObjectState(fieldObject);
+        }
+
+        private void HandleFieldObjectState(FieldObjectPlacedEventDto evt)
+        {
+            if (_objectsById.ContainsKey(evt.objectId))
                 return;
 
             if (!prefabRegistry.TryGetPrefab(evt.prefabId, out var prefab))
             {
-                Debug.LogWarning($"[NetworkPlacementController] Ship prefab not found: {evt.prefabId}.");
+                Debug.LogWarning($"[NetworkPlacementController] Field object prefab not found: {evt.prefabId}.");
                 return;
             }
 
-            Debug.Log($"[NetworkPlacementController] Received ship placement: owner=Player{evt.ownerPlayerIndex}, prefab={evt.prefabId}, cell={evt.originCell}.");
-            StartCoroutine(SpawnConfirmedObject(evt.objectId, evt.prefabId, evt.ownerPlayerIndex, evt.originCell, prefab));
-        }
-
-        private void HandleAbilityPlaced(AbilityPlacedEventDto evt)
-        {
-            if (ShouldSkipConfirmedLocalObject(evt.ownerPlayerIndex, evt.objectId))
-                return;
-
-            if (!prefabRegistry.TryGetPrefab(evt.prefabId, out var prefab))
-            {
-                Debug.LogWarning($"[NetworkPlacementController] Ability prefab not found: {evt.prefabId}.");
-                return;
-            }
-
-            Debug.Log($"[NetworkPlacementController] Received ability placement: owner=Player{evt.ownerPlayerIndex}, prefab={evt.prefabId}, cell={evt.targetCell}.");
-            StartCoroutine(SpawnConfirmedObject(evt.objectId, evt.prefabId, evt.targetOwnerPlayerIndex, evt.targetCell, prefab));
+            Debug.Log($"[NetworkPlacementController] Applying field object snapshot: objectOwner=Player{evt.objectOwnerPlayerIndex}, fieldOwner=Player{evt.fieldOwnerPlayerIndex}, prefab={evt.prefabId}, cell={evt.originCell}.");
+            StartCoroutine(SpawnConfirmedObject(evt, prefab));
         }
 
         private IEnumerator SpawnConfirmedObject(
-            string objectId,
-            string prefabId,
-            int ownerPlayerIndex,
-            Vector3Int cell,
+            FieldObjectPlacedEventDto evt,
             PlaceableObject.PlaceableObject prefab)
         {
-            var isLocalPlayerObject = playerContext.IsLocalPlayer(ownerPlayerIndex);
+            var isLocalPlayerObject = playerContext.IsLocalPlayer(evt.objectOwnerPlayerIndex);
             var localCell = playerContext.ToLocalViewCell(
-                ownerPlayerIndex,
-                cell,
+                evt.fieldOwnerPlayerIndex,
+                evt.originCell,
                 cellGrid.GridSize,
                 rotateOpponentFieldCoordinates);
-            var isPlayerObject = playerContext.IsPlayerObject(ownerPlayerIndex);
+            var isPlayerObject = playerContext.IsPlayerObject(evt.fieldOwnerPlayerIndex);
             var instance = spawning.SpawnAtCell(prefab, localCell, isPlayerObject);
             if (!instance)
                 yield break;
+
+            instance.SetCellStateVisualizationEnabled(isLocalPlayerObject);
 
             if (!isLocalPlayerObject && rotateOpponentObjects)
                 instance.ApplyLocalViewRotation180();
 
             instance.CurrentPosition = localCell;
-            instance.SetNetworkIdentity(objectId, prefabId, ownerPlayerIndex, true);
-            _objectsById[objectId] = instance;
+            instance.SetNetworkIdentity(evt.objectId, evt.prefabId, evt.objectOwnerPlayerIndex, true);
+            instance.SetNetworkFieldOwner(evt.fieldOwnerPlayerIndex);
+            _objectsById[evt.objectId] = instance;
             lifecycleTracker.Register(instance);
 
             yield return null;
@@ -143,12 +143,13 @@ namespace Network
             instance.TryPlace();
         }
 
-        private bool ShouldSkipConfirmedLocalObject(int ownerPlayerIndex, string objectId)
+        private bool ShouldIncludeInLocalSnapshot(PlaceableObject.PlaceableObject placeableObject)
         {
-            if (!playerContext.IsLocalPlayer(ownerPlayerIndex))
+            if (!placeableObject || placeableObject.State != PlaceableObjectState.Placed)
                 return false;
 
-            return !string.IsNullOrWhiteSpace(objectId) && _objectsById.ContainsKey(objectId);
+            return placeableObject.OwnerPlayerIndex == 0 ||
+                   playerContext.IsLocalPlayer(placeableObject.OwnerPlayerIndex);
         }
 
         private void EnsureLocalIdentity(PlaceableObject.PlaceableObject placeableObject)
@@ -161,11 +162,15 @@ namespace Network
             placeableObject.SetNetworkIdentity(objectId, prefabId, playerContext.LocalPlayerIndex, false);
         }
 
-        private PlaceShipRequestDto CreateShipPlacementRequest(PlaceableObject.PlaceableObject placeableObject)
+        private FieldObjectPlacedEventDto CreateFieldObjectState(
+            PlaceableObject.PlaceableObject placeableObject,
+            int fieldOwnerPlayerIndex)
         {
             placeableObject.EnsureShapeInitialized();
-            return new PlaceShipRequestDto
+            return new FieldObjectPlacedEventDto
             {
+                objectOwnerPlayerIndex = playerContext.LocalPlayerIndex,
+                fieldOwnerPlayerIndex = fieldOwnerPlayerIndex,
                 objectId = placeableObject.NetworkObjectId,
                 prefabId = placeableObject.NetworkPrefabId,
                 originCell = placeableObject.CurrentPosition,
@@ -173,25 +178,42 @@ namespace Network
             };
         }
 
-        private PlaceAbilityRequestDto CreateAbilityPlacementRequest(PlaceableObject.PlaceableObject placeableObject)
-        {
-            return new PlaceAbilityRequestDto
-            {
-                objectId = placeableObject.NetworkObjectId,
-                sourceShipId = string.Empty,
-                abilityId = placeableObject.NetworkPrefabId,
-                prefabId = placeableObject.NetworkPrefabId,
-                targetOwnerPlayerIndex = GetTargetOwnerPlayerIndex(placeableObject),
-                targetCell = placeableObject.CurrentPosition
-            };
-        }
-
-        private int GetTargetOwnerPlayerIndex(PlaceableObject.PlaceableObject placeableObject)
+        private int GetFieldOwnerPlayerIndex(PlaceableObject.PlaceableObject placeableObject)
         {
             if (placeableObject.IsPlayerObject)
                 return playerContext.LocalPlayerIndex;
 
             return playerContext.LocalPlayerIndex == 1 ? 2 : 1;
+        }
+
+        private void RemoveStaleSnapshotObjects(FieldSnapshotDto snapshot)
+        {
+            var snapshotIds = new HashSet<string>();
+            foreach (var fieldObject in snapshot.objects)
+            {
+                if (!string.IsNullOrWhiteSpace(fieldObject.objectId))
+                    snapshotIds.Add(fieldObject.objectId);
+            }
+
+            var staleObjects = new List<PlaceableObject.PlaceableObject>();
+            foreach (var pair in _objectsById)
+            {
+                var placeableObject = pair.Value;
+                if (!placeableObject)
+                    continue;
+                if (placeableObject.OwnerPlayerIndex != snapshot.ownerPlayerIndex)
+                    continue;
+                if (snapshotIds.Contains(pair.Key))
+                    continue;
+
+                staleObjects.Add(placeableObject);
+            }
+
+            foreach (var staleObject in staleObjects)
+            {
+                _objectsById.Remove(staleObject.NetworkObjectId);
+                Destroy(staleObject.gameObject);
+            }
         }
 
         private void ResolveDependencies()

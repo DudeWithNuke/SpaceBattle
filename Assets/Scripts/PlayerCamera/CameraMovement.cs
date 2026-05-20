@@ -1,8 +1,6 @@
 using GameBoard;
-using InputController;
 using System;
 using PlayerCamera.Movement;
-using PlaceableObject;
 using PlaceableObjectManipulation;
 using Reflex.Attributes;
 using ScriptableObjects;
@@ -28,6 +26,7 @@ namespace PlayerCamera
         private Zoom _zoom;
         private CameraState _cameraState;
         private bool _lastNotifiedPlayerField;
+        private bool _isBattlefieldSwitchEnabled = true;
 
         public bool IsPlayerBattlefieldActive => _cameraState == null || _cameraState.IsPlayerBattlefieldActive;
 
@@ -51,7 +50,7 @@ namespace PlayerCamera
 
         public void Tick(CameraInputFrame inputFrame, float deltaTime)
         {
-            if (inputFrame.SwitchBattlefieldRequested)
+            if (inputFrame.SwitchBattlefieldRequested && _isBattlefieldSwitchEnabled)
             {
                 ReturnPickedObjectToMenuIfAny();
                 Orbiting.StopOrbit(_cameraState);
@@ -69,6 +68,11 @@ namespace PlayerCamera
             }
 
             UpdateCameraPosition();
+        }
+
+        public void SetBattlefieldSwitchEnabled(bool isEnabled)
+        {
+            _isBattlefieldSwitchEnabled = isEnabled;
         }
 
         private void ReturnPickedObjectToMenuIfAny()

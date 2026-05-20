@@ -12,6 +12,8 @@ namespace PlaceableObjectManipulation
 
         private readonly HashSet<PlaceableObject.PlaceableObject> _trackedObjects = new();
 
+        public IEnumerable<PlaceableObject.PlaceableObject> TrackedObjects => _trackedObjects;
+
         public void Register(PlaceableObject.PlaceableObject placeableObject)
         {
             if (!placeableObject || !_trackedObjects.Add(placeableObject))

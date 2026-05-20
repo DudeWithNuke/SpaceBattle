@@ -10,10 +10,8 @@ namespace Network
         public const string EndTurnRequest = "EndTurnRequest";
         public const string MatchState = "MatchState";
         public const string PlayerAssigned = "PlayerAssigned";
-        public const string PlaceShipRequest = "PlaceShipRequest";
-        public const string ShipPlaced = "ShipPlaced";
-        public const string PlaceAbilityRequest = "PlaceAbilityRequest";
-        public const string AbilityPlaced = "AbilityPlaced";
+        public const string SubmitFieldSnapshot = "SubmitFieldSnapshot";
+        public const string FieldSnapshot = "FieldSnapshot";
     }
 
     [Serializable]
@@ -53,10 +51,11 @@ namespace Network
     [Serializable]
     public struct MatchStateDto
     {
+        public MatchPhase phase;
         public int turnNumber;
         public int activePlayerIndex;
         public float remainingSeconds;
-        public string status;
+        public MatchStatus status;
     }
 
     [Serializable]
@@ -66,8 +65,10 @@ namespace Network
     }
 
     [Serializable]
-    public struct PlaceShipRequestDto
+    public struct FieldObjectPlacedEventDto
     {
+        public int objectOwnerPlayerIndex;
+        public int fieldOwnerPlayerIndex;
         public string objectId;
         public string prefabId;
         public Vector3Int originCell;
@@ -75,36 +76,12 @@ namespace Network
     }
 
     [Serializable]
-    public struct ShipPlacedEventDto
+    public struct FieldSnapshotDto
     {
         public int ownerPlayerIndex;
-        public string objectId;
-        public string prefabId;
-        public Vector3Int originCell;
-        public Vector3Int[] occupiedCells;
-    }
-
-    [Serializable]
-    public struct PlaceAbilityRequestDto
-    {
-        public string objectId;
-        public string sourceShipId;
-        public string abilityId;
-        public string prefabId;
-        public int targetOwnerPlayerIndex;
-        public Vector3Int targetCell;
-    }
-
-    [Serializable]
-    public struct AbilityPlacedEventDto
-    {
-        public int ownerPlayerIndex;
-        public string objectId;
-        public string sourceShipId;
-        public string abilityId;
-        public string prefabId;
-        public int targetOwnerPlayerIndex;
-        public Vector3Int targetCell;
+        public MatchPhase phase;
+        public int turnNumber;
+        public FieldObjectPlacedEventDto[] objects;
     }
 
     [Serializable]

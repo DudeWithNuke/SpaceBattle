@@ -1,4 +1,5 @@
 using PlaceableObjectManipulation;
+using PlayerCamera;
 using UnityEngine;
 
 namespace Network
@@ -9,9 +10,11 @@ namespace Network
         [SerializeField] private NetworkPlayerContext playerContext;
         [SerializeField] private Selection selection;
         [SerializeField] private FleetPanelController fleetPanelController;
+        [SerializeField] private CameraMovement cameraMovement;
 
         private bool _hasMatchState;
         private int _activePlayerIndex;
+        private MatchPhase _phase;
 
         private void Awake()
         {
@@ -42,13 +45,12 @@ namespace Network
         private void HandleMatchStateChanged(MatchStateDto state)
         {
             var previousActivePlayerIndex = _activePlayerIndex;
-            _hasMatchState = state.status is "Started" or "Submitted" or "TimerExpired";
+            var previousPhase = _phase;
+            _hasMatchState = state.phase is MatchPhase.Deployment or MatchPhase.Battle;
+            _phase = state.phase;
             _activePlayerIndex = state.activePlayerIndex;
 
-            if (state.status == "TimerExpired" &&
-                playerContext &&
-                playerContext.LocalPlayerIndex == previousActivePlayerIndex &&
-                previousActivePlayerIndex != state.activePlayerIndex)
+            if (ShouldForceReturnPickedObject(state, previousPhase, previousActivePlayerIndex))
                 selection?.ForceDestroyCurrentPickedObject();
 
             ApplyInteractionState();
@@ -61,13 +63,32 @@ namespace Network
 
         private void ApplyInteractionState()
         {
+            var isDeploymentPhase = _phase == MatchPhase.Deployment;
+            var isBattlePhase = _phase == MatchPhase.Battle;
             var canInteract = _hasMatchState &&
                               playerContext &&
                               playerContext.HasAssignedPlayer &&
-                              playerContext.LocalPlayerIndex == _activePlayerIndex;
+                              (isDeploymentPhase || playerContext.LocalPlayerIndex == _activePlayerIndex);
 
             selection?.SetInteractionEnabled(canInteract);
+            selection?.SetCanPickPlacedObjects(isDeploymentPhase);
             fleetPanelController?.SetTurnInteractionEnabled(canInteract);
+            fleetPanelController?.SetBattlePhase(isBattlePhase);
+            cameraMovement?.SetBattlefieldSwitchEnabled(isBattlePhase);
+        }
+
+        private bool ShouldForceReturnPickedObject(MatchStateDto state, MatchPhase previousPhase, int previousActivePlayerIndex)
+        {
+            if (!playerContext)
+                return false;
+
+            if (previousPhase == MatchPhase.Deployment &&
+                state.phase == MatchPhase.Battle)
+                return true;
+
+            return state.status == MatchStatus.TimerExpired &&
+                   playerContext.LocalPlayerIndex == previousActivePlayerIndex &&
+                   previousActivePlayerIndex != state.activePlayerIndex;
         }
 
         private void ResolveDependencies()
@@ -80,6 +101,8 @@ namespace Network
                 selection = FindFirstObjectByType<Selection>();
             if (!fleetPanelController)
                 fleetPanelController = FindFirstObjectByType<FleetPanelController>();
+            if (!cameraMovement)
+                cameraMovement = FindFirstObjectByType<CameraMovement>();
         }
     }
 }

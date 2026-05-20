@@ -37,7 +37,9 @@ namespace PlaceableObjectManipulation
         private bool _isPlayerBattlefieldActive = true;
         private bool _showPlacedObjects;
         private bool _isInitialized;
+        private bool _isWaitingForPlayerAssignment;
         private bool _isTurnInteractionEnabled;
+        private bool _isBattlePhase;
 
         private readonly struct ButtonBinding
         {
@@ -64,9 +66,7 @@ namespace PlaceableObjectManipulation
             abilityPlacementController.OnAbilitySpawned += HandleAbilitySpawned;
 
             EnsureUiInteractionReady();
-            _playerContext = FindFirstObjectByType<NetworkPlayerContext>();
-            if (_playerContext)
-                _playerContext.OnLocalPlayerAssigned += HandleLocalPlayerAssigned;
+            ResolvePlayerContext();
 
             CreateButtons();
 
@@ -75,6 +75,19 @@ namespace PlaceableObjectManipulation
 
             RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
             _isInitialized = true;
+        }
+
+        private void Update()
+        {
+            if (!_isInitialized || !_isWaitingForPlayerAssignment)
+                return;
+
+            ResolvePlayerContext();
+            if (!_playerContext || !_playerContext.HasAssignedPlayer)
+                return;
+
+            _isWaitingForPlayerAssignment = false;
+            RecreateButtons();
         }
 
         public void HandleObjectPicked(PlaceableObject.PlaceableObject placeableObject)
@@ -107,6 +120,15 @@ namespace PlaceableObjectManipulation
             RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
         }
 
+        public void SetBattlePhase(bool isBattlePhase)
+        {
+            if (_isBattlePhase == isBattlePhase)
+                return;
+
+            _isBattlePhase = isBattlePhase;
+            RefreshButtonsForBattlefield(_isPlayerBattlefieldActive);
+        }
+
         private void OnDestroy()
         {
             _cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
@@ -132,9 +154,15 @@ namespace PlaceableObjectManipulation
 
         private void CreateButtons()
         {
-            var ships = _playerContext && _playerContext.HasAssignedPlayer
-                ? _shipRoster.GetForPlayer(_playerContext.LocalPlayerIndex)
-                : _shipRoster.GetAll();
+            if (!_playerContext || !_playerContext.HasAssignedPlayer)
+            {
+                _isWaitingForPlayerAssignment = true;
+                Debug.Log("[FleetPanelController] Ship buttons creation deferred. Local player is not assigned yet.");
+                return;
+            }
+
+            _isWaitingForPlayerAssignment = false;
+            var ships = _shipRoster.GetForPlayer(_playerContext.LocalPlayerIndex);
 
             foreach (var placeableObject in ships)
             {
@@ -225,12 +253,26 @@ namespace PlaceableObjectManipulation
 
         private void HandleLocalPlayerAssigned(int _)
         {
+            _isWaitingForPlayerAssignment = false;
             RecreateButtons();
+        }
+
+        private void ResolvePlayerContext()
+        {
+            var playerContext = FindFirstObjectByType<NetworkPlayerContext>();
+            if (!playerContext || playerContext == _playerContext)
+                return;
+
+            if (_playerContext)
+                _playerContext.OnLocalPlayerAssigned -= HandleLocalPlayerAssigned;
+
+            _playerContext = playerContext;
+            _playerContext.OnLocalPlayerAssigned += HandleLocalPlayerAssigned;
         }
 
         private void RefreshButtonsForBattlefield(bool isPlayerBattlefieldActive)
         {
-            var isInteractionBlockedByAbility = abilityPlacementController.IsShipInteractionBlocked();
+            var isInteractionBlockedByAbility = abilityPlacementController.IsShipInteractionBlockedByPlacedAbility();
 
             foreach (var binding in _buttonBindings)
             {
@@ -238,8 +280,9 @@ namespace PlaceableObjectManipulation
                 if (!button)
                     continue;
 
-                button.SetInteractionEnabled(!isInteractionBlockedByAbility);
+                button.SetAbilityInteractionEnabled(!isInteractionBlockedByAbility);
                 button.SetTurnInteractionEnabled(_isTurnInteractionEnabled);
+                button.SetBattlePhase(_isBattlePhase);
                 button.SetAbilityBattlefield(isPlayerBattlefieldActive);
                 button.gameObject.SetActive(IsButtonVisible(binding));
             }

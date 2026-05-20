@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,32 +9,34 @@ namespace Network
     public sealed class NetworkMatchController : MonoBehaviour
     {
         private const int MaxPlayers = 2;
-        private const float TurnDurationSeconds = 30f;
+        private const float DeploymentDurationSeconds = 60f;
+        private const float BattleTurnDurationSeconds = 30f;
 
         public event System.Action<PlayerAssignedEventDto> OnPlayerAssigned;
         public event System.Action<MatchStateDto> OnMatchStateChanged;
-        public event System.Action<ShipPlacedEventDto> OnShipPlaced;
-        public event System.Action<AbilityPlacedEventDto> OnAbilityPlaced;
+        public event System.Action<FieldSnapshotDto> OnFieldSnapshotReceived;
 
         private readonly Dictionary<ulong, PlayerConnectionInfo> _playersByClientId = new();
-        private readonly Dictionary<int, HashSet<Vector3Int>> _occupiedShipCellsByPlayer = new();
-        private readonly List<ShipPlacedEventDto> _pendingShipPlacements = new();
-        private readonly List<AbilityPlacedEventDto> _pendingAbilityPlacements = new();
+        private readonly Dictionary<int, FieldSnapshotDto> _pendingFieldSnapshotsByPlayer = new();
         private int _turnNumber;
         private int _activePlayerIndex;
         private float _turnRemainingSeconds;
+        private MatchPhase _phase;
         private bool _matchStarted;
-        private bool _hasPlacedAbility;
         private bool _callbacksRegistered;
         private bool _messageHandlersRegistered;
 
         private NetworkManager _networkManager;
         private NetworkPlayerContext _playerContext;
+        private NetworkPlacementController _placementController;
+        private bool _timerSnapshotSubmitted;
+
+        public MatchPhase CurrentPhase => _phase;
+        public int CurrentTurnNumber => _turnNumber;
 
         private void Awake()
         {
-            _networkManager = NetworkManager.Singleton;
-            _playerContext = GetComponent<NetworkPlayerContext>() ?? FindFirstObjectByType<NetworkPlayerContext>();
+            ResolveDependencies();
         }
 
         private void OnEnable()
@@ -48,14 +51,22 @@ namespace Network
 
         private void Update()
         {
-            if (!_networkManager || !_networkManager.IsServer || !_matchStarted)
+            if (!_networkManager || !_matchStarted)
                 return;
 
             _turnRemainingSeconds -= Time.deltaTime;
+            TrySubmitSnapshotBeforeClientTimerExpires();
+
+            if (!_networkManager.IsServer)
+                return;
+
             if (_turnRemainingSeconds > 0f)
                 return;
 
-            CompleteActiveTurn("TimerExpired");
+            if (_phase == MatchPhase.Deployment)
+                CompleteDeployment(MatchStatus.DeploymentTimerExpired);
+            else
+                CompleteActiveTurn(MatchStatus.TimerExpired);
         }
 
         public void SubmitFleetPreset(FleetPresetDto preset)
@@ -92,6 +103,20 @@ namespace Network
             SendToServer(NetworkMessageNames.EndTurnRequest, ToJson(request));
         }
 
+        public void SubmitFieldSnapshot(FieldSnapshotDto snapshot)
+        {
+            if (snapshot.ownerPlayerIndex <= 0)
+                return;
+
+            if (IsHost())
+            {
+                HandleFieldSnapshot(NetworkManager.ServerClientId, snapshot);
+                return;
+            }
+
+            SendToServer(NetworkMessageNames.SubmitFieldSnapshot, ToJson(snapshot));
+        }
+
         public void InitializeAfterNetworkStart()
         {
             RegisterCallbacks();
@@ -100,31 +125,9 @@ namespace Network
                 EnsureServerPlayerRegistered(NetworkManager.ServerClientId);
         }
 
-        public void SubmitShipPlacement(PlaceShipRequestDto request)
-        {
-            if (IsHost())
-            {
-                HandlePlaceShipRequest(NetworkManager.ServerClientId, request);
-                return;
-            }
-
-            SendToServer(NetworkMessageNames.PlaceShipRequest, ToJson(request));
-        }
-
-        public void SubmitAbilityPlacement(PlaceAbilityRequestDto request)
-        {
-            if (IsHost())
-            {
-                HandlePlaceAbilityRequest(NetworkManager.ServerClientId, request);
-                return;
-            }
-
-            SendToServer(NetworkMessageNames.PlaceAbilityRequest, ToJson(request));
-        }
-
         private void RegisterCallbacks()
         {
-            _networkManager = NetworkManager.Singleton;
+            ResolveDependencies();
             if (!_networkManager)
                 return;
 
@@ -156,18 +159,11 @@ namespace Network
                 NetworkMessageNames.PlayerAssigned,
                 ReceivePlayerAssigned);
             _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
-                NetworkMessageNames.PlaceShipRequest,
-                ReceivePlaceShipRequest);
+                NetworkMessageNames.SubmitFieldSnapshot,
+                ReceiveFieldSnapshot);
             _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
-                NetworkMessageNames.ShipPlaced,
-                ReceiveShipPlaced);
-            _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
-                NetworkMessageNames.PlaceAbilityRequest,
-                ReceivePlaceAbilityRequest);
-            _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
-                NetworkMessageNames.AbilityPlaced,
-                ReceiveAbilityPlaced);
-
+                NetworkMessageNames.FieldSnapshot,
+                ReceiveFieldSnapshotBroadcast);
             _messageHandlersRegistered = true;
             Debug.Log("[NetworkMatchController] Network message handlers registered.");
         }
@@ -192,10 +188,8 @@ namespace Network
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.EndTurnRequest);
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.MatchState);
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.PlayerAssigned);
-            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.PlaceShipRequest);
-            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.ShipPlaced);
-            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.PlaceAbilityRequest);
-            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.AbilityPlaced);
+            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.SubmitFieldSnapshot);
+            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.FieldSnapshot);
             _messageHandlersRegistered = false;
         }
 
@@ -275,9 +269,12 @@ namespace Network
 
             reader.ReadValueSafe(out string json);
             var state = FromJson<MatchStateDto>(json);
+            _phase = state.phase;
             _turnNumber = state.turnNumber;
             _activePlayerIndex = state.activePlayerIndex;
             _turnRemainingSeconds = state.remainingSeconds;
+            _matchStarted = state.phase is MatchPhase.Deployment or MatchPhase.Battle;
+            _timerSnapshotSubmitted = false;
             OnMatchStateChanged?.Invoke(state);
             Debug.Log($"[NetworkMatchController] Active player from network state: Player{state.activePlayerIndex}.");
             Debug.Log($"[NetworkMatchController] Match state received. Status={state.status}, Turn={state.turnNumber}, ActivePlayer={state.activePlayerIndex}.");
@@ -290,34 +287,19 @@ namespace Network
             ApplyPlayerAssignment(evt);
         }
 
-        private void ReceivePlaceShipRequest(ulong senderClientId, FastBufferReader reader)
+        private void ReceiveFieldSnapshot(ulong senderClientId, FastBufferReader reader)
         {
             if (!_networkManager.IsServer)
                 return;
 
             reader.ReadValueSafe(out string json);
-            HandlePlaceShipRequest(senderClientId, FromJson<PlaceShipRequestDto>(json));
+            HandleFieldSnapshot(senderClientId, FromJson<FieldSnapshotDto>(json));
         }
 
-        private void ReceiveShipPlaced(ulong senderClientId, FastBufferReader reader)
+        private void ReceiveFieldSnapshotBroadcast(ulong senderClientId, FastBufferReader reader)
         {
             reader.ReadValueSafe(out string json);
-            OnShipPlaced?.Invoke(FromJson<ShipPlacedEventDto>(json));
-        }
-
-        private void ReceivePlaceAbilityRequest(ulong senderClientId, FastBufferReader reader)
-        {
-            if (!_networkManager.IsServer)
-                return;
-
-            reader.ReadValueSafe(out string json);
-            HandlePlaceAbilityRequest(senderClientId, FromJson<PlaceAbilityRequestDto>(json));
-        }
-
-        private void ReceiveAbilityPlaced(ulong senderClientId, FastBufferReader reader)
-        {
-            reader.ReadValueSafe(out string json);
-            OnAbilityPlaced?.Invoke(FromJson<AbilityPlacedEventDto>(json));
+            OnFieldSnapshotReceived?.Invoke(FromJson<FieldSnapshotDto>(json));
         }
 
         private void HandleFleetPreset(ulong clientId, FleetPresetDto preset)
@@ -356,7 +338,7 @@ namespace Network
             }
 
             Debug.Log($"[NetworkMatchController] Ability request accepted. Ship={request.sourceShipId}, Ability={request.abilityId}, Target={request.targetCell}.");
-            BroadcastMatchState("AbilityResolved");
+            BroadcastMatchState(MatchStatus.AbilityResolved);
         }
 
         private void HandleEndTurnRequest(ulong clientId, EndTurnRequestDto request)
@@ -367,91 +349,34 @@ namespace Network
                 return;
             }
 
+            if (_phase == MatchPhase.Deployment)
+            {
+                CompleteDeployment(MatchStatus.DeploymentSubmitted);
+                return;
+            }
+
             if (!IsActivePlayer(clientId))
             {
                 Debug.LogWarning($"[NetworkMatchController] End turn rejected. Client {clientId} is not active player.");
                 return;
             }
 
-            CompleteActiveTurn("Submitted");
+            CompleteActiveTurn(MatchStatus.Submitted);
         }
 
-        private void HandlePlaceShipRequest(ulong clientId, PlaceShipRequestDto request)
+        private void HandleFieldSnapshot(ulong clientId, FieldSnapshotDto snapshot)
         {
             if (!_playersByClientId.TryGetValue(clientId, out var player))
             {
-                Debug.LogWarning($"[NetworkMatchController] Ship placement rejected. Unknown client {clientId}.");
+                Debug.LogWarning($"[NetworkMatchController] Field snapshot ignored. Unknown client {clientId}.");
                 return;
             }
 
-            if (!IsActivePlayer(clientId))
-            {
-                Debug.LogWarning($"[NetworkMatchController] Ship placement rejected. Client {clientId} is not active player.");
-                return;
-            }
-
-            if (!ValidateShipPlacement(player.PlayerIndex, request))
-            {
-                Debug.LogWarning($"[NetworkMatchController] Ship placement rejected for Player{player.PlayerIndex}.");
-                return;
-            }
-
-            ReserveShipCells(player.PlayerIndex, request.occupiedCells);
-
-            var evt = new ShipPlacedEventDto
-            {
-                ownerPlayerIndex = player.PlayerIndex,
-                objectId = request.objectId,
-                prefabId = request.prefabId,
-                originCell = request.originCell,
-                occupiedCells = request.occupiedCells
-            };
-
-            Debug.Log($"[NetworkMatchController] Ship placed by Player{player.PlayerIndex}: {request.prefabId} at {request.originCell}.");
-            _pendingShipPlacements.Add(evt);
-        }
-
-        private void HandlePlaceAbilityRequest(ulong clientId, PlaceAbilityRequestDto request)
-        {
-            if (!_playersByClientId.TryGetValue(clientId, out var player))
-            {
-                Debug.LogWarning($"[NetworkMatchController] Ability placement rejected. Unknown client {clientId}.");
-                return;
-            }
-
-            if (!IsActivePlayer(clientId))
-            {
-                Debug.LogWarning($"[NetworkMatchController] Ability placement rejected. Client {clientId} is not active player.");
-                return;
-            }
-
-            if (_hasPlacedAbility)
-            {
-                Debug.LogWarning("[NetworkMatchController] Ability placement rejected. Ability is already placed.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(request.prefabId))
-            {
-                Debug.LogWarning($"[NetworkMatchController] Ability placement rejected for Player{player.PlayerIndex}. Missing prefab id.");
-                return;
-            }
-
-            _hasPlacedAbility = true;
-
-            var evt = new AbilityPlacedEventDto
-            {
-                ownerPlayerIndex = player.PlayerIndex,
-                objectId = request.objectId,
-                sourceShipId = request.sourceShipId,
-                abilityId = request.abilityId,
-                prefabId = request.prefabId,
-                targetOwnerPlayerIndex = request.targetOwnerPlayerIndex,
-                targetCell = request.targetCell
-            };
-
-            Debug.Log($"[NetworkMatchController] Ability placed by Player{player.PlayerIndex}: {request.prefabId} at {request.targetCell}.");
-            _pendingAbilityPlacements.Add(evt);
+            snapshot.ownerPlayerIndex = player.PlayerIndex;
+            snapshot.phase = _phase;
+            snapshot.turnNumber = _turnNumber;
+            _pendingFieldSnapshotsByPlayer[player.PlayerIndex] = snapshot;
+            Debug.Log($"[NetworkMatchController] Field snapshot buffered for Player{player.PlayerIndex}. Objects={snapshot.objects?.Length ?? 0}.");
         }
 
         private void TryStartMatch()
@@ -462,45 +387,84 @@ namespace Network
                 return;
 
             _matchStarted = true;
-            _turnNumber = 1;
-            _activePlayerIndex = Random.Range(1, MaxPlayers + 1);
-            _turnRemainingSeconds = TurnDurationSeconds;
-            Debug.Log($"[NetworkMatchController] Match started. Active player: Player{_activePlayerIndex}.");
-            BroadcastMatchState("Started");
+            _phase = MatchPhase.Deployment;
+            _turnNumber = 0;
+            _activePlayerIndex = 0;
+            _turnRemainingSeconds = DeploymentDurationSeconds;
+            Debug.Log("[NetworkMatchController] Deployment phase started.");
+            BroadcastMatchState(MatchStatus.DeploymentStarted);
         }
 
-        private void CompleteActiveTurn(string reason)
+        private void CompleteDeployment(MatchStatus reason)
         {
+            CaptureLocalSnapshotForTimer();
+            FlushPendingPlacements();
+            _phase = MatchPhase.Battle;
+            _turnNumber = 1;
+            _activePlayerIndex = Random.Range(1, MaxPlayers + 1);
+            _turnRemainingSeconds = BattleTurnDurationSeconds;
+            _timerSnapshotSubmitted = false;
+            Debug.Log($"[NetworkMatchController] Deployment completed by {reason}. Battle starts. Active player: Player{_activePlayerIndex}.");
+            BroadcastMatchState(reason);
+        }
+
+        private void CompleteActiveTurn(MatchStatus reason)
+        {
+            CaptureLocalSnapshotForTimer();
             FlushPendingPlacements();
             _turnNumber++;
             _activePlayerIndex = _activePlayerIndex == 1 ? 2 : 1;
-            _turnRemainingSeconds = TurnDurationSeconds;
+            _turnRemainingSeconds = BattleTurnDurationSeconds;
+            _timerSnapshotSubmitted = false;
             Debug.Log($"[NetworkMatchController] Turn completed by {reason}. Active player: Player{_activePlayerIndex}. Turn={_turnNumber}.");
             BroadcastMatchState(reason);
         }
 
         private void FlushPendingPlacements()
         {
-            foreach (var evt in _pendingShipPlacements)
+            foreach (var snapshot in _pendingFieldSnapshotsByPlayer.Values)
             {
-                OnShipPlaced?.Invoke(evt);
-                Broadcast(NetworkMessageNames.ShipPlaced, ToJson(evt));
+                OnFieldSnapshotReceived?.Invoke(snapshot);
+                Broadcast(NetworkMessageNames.FieldSnapshot, ToJson(snapshot));
             }
 
-            foreach (var evt in _pendingAbilityPlacements)
-            {
-                OnAbilityPlaced?.Invoke(evt);
-                Broadcast(NetworkMessageNames.AbilityPlaced, ToJson(evt));
-            }
-
-            _pendingShipPlacements.Clear();
-            _pendingAbilityPlacements.Clear();
+            _pendingFieldSnapshotsByPlayer.Clear();
         }
 
-        private void BroadcastMatchState(string status)
+        private void CaptureLocalSnapshotForTimer()
+        {
+            ResolveDependencies();
+
+            if (!_placementController || !_playerContext || !_playerContext.HasAssignedPlayer)
+                return;
+            if (_phase == MatchPhase.Battle && _playerContext.LocalPlayerIndex != _activePlayerIndex)
+                return;
+
+            var snapshot = _placementController.CreateLocalFieldSnapshot(_phase, _turnNumber);
+            if (snapshot.ownerPlayerIndex > 0)
+                HandleFieldSnapshot(NetworkManager.ServerClientId, snapshot);
+        }
+
+        private void TrySubmitSnapshotBeforeClientTimerExpires()
+        {
+            if (!_networkManager || _networkManager.IsServer)
+                return;
+            if (_timerSnapshotSubmitted || _turnRemainingSeconds > 0.25f)
+                return;
+            if (!_playerContext || !_playerContext.HasAssignedPlayer)
+                return;
+            if (_phase == MatchPhase.Battle && _playerContext.LocalPlayerIndex != _activePlayerIndex)
+                return;
+
+            _placementController?.SubmitLocalFieldSnapshot(_phase, _turnNumber);
+            _timerSnapshotSubmitted = true;
+        }
+
+        private void BroadcastMatchState(MatchStatus status)
         {
             var state = new MatchStateDto
             {
+                phase = _phase,
                 turnNumber = _turnNumber,
                 activePlayerIndex = _activePlayerIndex,
                 remainingSeconds = _turnRemainingSeconds,
@@ -511,54 +475,20 @@ namespace Network
             Broadcast(NetworkMessageNames.MatchState, ToJson(state));
         }
 
-        private bool IsActivePlayer(ulong clientId)
-        {
-            return _playersByClientId.TryGetValue(clientId, out var player) &&
-                   player.PlayerIndex == _activePlayerIndex;
-        }
-
         private static bool ValidateFleetPreset(FleetPresetDto preset)
         {
             return preset.ships != null && preset.ships.Length > 0;
         }
 
-        private bool ValidateShipPlacement(int playerIndex, PlaceShipRequestDto request)
-        {
-            if (string.IsNullOrWhiteSpace(request.prefabId))
-                return false;
-            if (request.occupiedCells == null || request.occupiedCells.Length == 0)
-                return false;
-
-            var occupiedCells = GetOccupiedShipCells(playerIndex);
-            foreach (var cell in request.occupiedCells)
-            {
-                if (occupiedCells.Contains(cell))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private void ReserveShipCells(int playerIndex, IReadOnlyList<Vector3Int> occupiedCells)
-        {
-            var reservedCells = GetOccupiedShipCells(playerIndex);
-            foreach (var cell in occupiedCells)
-                reservedCells.Add(cell);
-        }
-
-        private HashSet<Vector3Int> GetOccupiedShipCells(int playerIndex)
-        {
-            if (_occupiedShipCellsByPlayer.TryGetValue(playerIndex, out var occupiedCells))
-                return occupiedCells;
-
-            occupiedCells = new HashSet<Vector3Int>();
-            _occupiedShipCellsByPlayer[playerIndex] = occupiedCells;
-            return occupiedCells;
-        }
-
         private bool IsHost()
         {
             return _networkManager && _networkManager.IsServer;
+        }
+
+        private bool IsActivePlayer(ulong clientId)
+        {
+            return _playersByClientId.TryGetValue(clientId, out var player) &&
+                   player.PlayerIndex == _activePlayerIndex;
         }
 
         private void SendToServer(string messageName, string json)
@@ -600,9 +530,18 @@ namespace Network
 
         private void ApplyPlayerAssignment(PlayerAssignedEventDto evt)
         {
-            _playerContext ??= GetComponent<NetworkPlayerContext>() ?? FindFirstObjectByType<NetworkPlayerContext>();
+            ResolveDependencies();
             _playerContext?.SetLocalPlayerIndex(evt.playerIndex);
             OnPlayerAssigned?.Invoke(evt);
+        }
+
+        private void ResolveDependencies()
+        {
+            _networkManager = NetworkManager.Singleton;
+            if (!_playerContext)
+                _playerContext = GetComponent<NetworkPlayerContext>() ?? FindFirstObjectByType<NetworkPlayerContext>();
+            if (!_placementController)
+                _placementController = GetComponent<NetworkPlacementController>() ?? FindFirstObjectByType<NetworkPlacementController>();
         }
 
         private void Send(string messageName, ulong clientId, string json)
@@ -613,9 +552,16 @@ namespace Network
                 return;
             }
 
-            using var writer = new FastBufferWriter(4096, Allocator.Temp);
+            var writerCapacity = Mathf.Max(
+                Encoding.UTF8.GetByteCount(json),
+                json.Length * sizeof(char)) + 1024;
+            using var writer = new FastBufferWriter(writerCapacity, Allocator.Temp);
             writer.WriteValueSafe(json);
-            _networkManager.CustomMessagingManager.SendNamedMessage(messageName, clientId, writer);
+            _networkManager.CustomMessagingManager.SendNamedMessage(
+                messageName,
+                clientId,
+                writer,
+                NetworkDelivery.ReliableFragmentedSequenced);
         }
 
         private static string ToJson<T>(T payload)

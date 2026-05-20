@@ -6,6 +6,7 @@ namespace Network
     public sealed class NetworkTurnSubmitController : MonoBehaviour
     {
         [SerializeField] private NetworkMatchController matchController;
+        [SerializeField] private NetworkPlacementController placementController;
         [SerializeField] private Selection selection;
         [SerializeField] private KeyCode debugSubmitKey = KeyCode.Return;
 
@@ -34,6 +35,9 @@ namespace Network
                 return;
             }
 
+            if (matchController && placementController)
+                placementController.SubmitLocalFieldSnapshot(matchController.CurrentPhase, matchController.CurrentTurnNumber);
+
             matchController?.RequestEndTurn();
         }
 
@@ -41,6 +45,8 @@ namespace Network
         {
             if (!matchController)
                 matchController = GetComponent<NetworkMatchController>() ?? FindFirstObjectByType<NetworkMatchController>();
+            if (!placementController)
+                placementController = GetComponent<NetworkPlacementController>() ?? FindFirstObjectByType<NetworkPlacementController>();
             if (!selection)
                 selection = FindFirstObjectByType<Selection>();
         }

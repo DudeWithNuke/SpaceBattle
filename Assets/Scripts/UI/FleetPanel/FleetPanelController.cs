@@ -21,13 +21,13 @@ namespace PlaceableObjectManipulation
 
         [Inject] private ShipRoster _shipRoster;
         [Inject] private CameraMovement _cameraMovement;
+        [Inject] private PlayerContext _playerContext;
 
         [SerializeField] private Spawning spawning;
         [SerializeField] private SpawnedObjectLifecycleTracker lifecycleTracker;
         [SerializeField] private AbilityPlacementController abilityPlacementController;
         [SerializeField] private Canvas buttonCanvas;
 
-        private PlayerContext _playerContext;
         private readonly List<UnitCardController> _shipButtons = new();
         private readonly Dictionary<PlaceableObject.PlaceableObject, UnitCardController> _objectToButton = new();
         private readonly List<ButtonBinding> _buttonBindings = new();
@@ -67,7 +67,7 @@ namespace PlaceableObjectManipulation
             abilityPlacementController.OnAbilitySpawned += HandleAbilitySpawned;
 
             EnsureUiInteractionReady();
-            ResolvePlayerContext();
+            _playerContext.OnLocalPlayerAssigned += HandleLocalPlayerAssigned;
 
             CreateButtons();
 
@@ -83,7 +83,6 @@ namespace PlaceableObjectManipulation
             if (!_isInitialized || !_isWaitingForPlayerAssignment)
                 return;
 
-            ResolvePlayerContext();
             if (_playerContext == null || !_playerContext.HasAssignedPlayer)
                 return;
 
@@ -261,19 +260,6 @@ namespace PlaceableObjectManipulation
         {
             _isWaitingForPlayerAssignment = false;
             RecreateButtons();
-        }
-
-        private void ResolvePlayerContext()
-        {
-            var playerContext = ContextProvider.PlayerContext;
-            if (playerContext == _playerContext)
-                return;
-
-            if (_playerContext != null)
-                _playerContext.OnLocalPlayerAssigned -= HandleLocalPlayerAssigned;
-
-            _playerContext = playerContext;
-            _playerContext.OnLocalPlayerAssigned += HandleLocalPlayerAssigned;
         }
 
         private void RefreshButtonsForBattlefield(bool isPlayerBattlefieldActive)

@@ -19,19 +19,19 @@ namespace Network
 {
     public sealed class NetworkRuntime : MonoBehaviour
     {
-        public event System.Action<PlayerAssignedEventDto> OnPlayerAssigned;
-        public event System.Action<MatchStateDto> OnMatchStateChanged;
-        public event System.Action<FieldSnapshotDto> OnFieldSnapshotReceived;
+        public event Action<PlayerAssignedEventDto> OnPlayerAssigned;
+        public event Action<MatchStateDto> OnMatchStateChanged;
+        public event Action<FieldSnapshotDto> OnFieldSnapshotReceived;
 
         private readonly MatchSession _session = new();
         private readonly PrefabRegistry _prefabRegistry = new();
 
         private NetworkManager _networkManager;
-        private PlayerContext _playerContext;
         private PlacementSynchronizer _placementSynchronizer;
         private TurnInputGateService _turnInputGateService;
         private TurnSubmitService _turnSubmitService;
 
+        [Inject] private PlayerContext _playerContext;
         [Inject] private Spawning _spawning;
         [Inject] private SpawnedObjectLifecycleTracker _lifecycleTracker;
         [Inject] private CellGrid _cellGrid;
@@ -83,7 +83,6 @@ namespace Network
             UnregisterCallbacks();
 
             _networkManager = networkManager;
-            _playerContext = ContextProvider.PlayerContext;
 
             _prefabRegistry.Initialize(_shipRoster);
             _placementSynchronizer = new PlacementSynchronizer(_playerContext, _prefabRegistry);

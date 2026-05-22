@@ -2,6 +2,7 @@ using System;
 using GameBoard;
 using InputController;
 using Network;
+using Network.Player;
 using PlaceableObjectManipulation;
 using PlayerCamera;
 using Reflex.Core;
@@ -26,9 +27,12 @@ public class GameInstaller : MonoBehaviour, IInstaller
 
     [SerializeField] private NetworkBootstrap networkBootstrap;
     [SerializeField] private NetworkRuntime networkRuntime;
-    
+
+    private readonly PlayerContext _playerContext = new();
+
     public void InstallBindings(ContainerBuilder builder)
     {
+        builder.RegisterValue(_playerContext);
         RegisterRequired(builder, cellGrid, nameof(cellGrid));
         RegisterRequired(builder, cursorPlane, nameof(cursorPlane));
         RegisterRequired(builder, selection, nameof(selection));

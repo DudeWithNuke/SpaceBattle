@@ -109,6 +109,15 @@ namespace PlaceableObject
             return true;
         }
 
+        public void ApplyConfirmedPlacement(Vector3Int position)
+        {
+            CurrentPosition = position;
+            State = PlaceableObjectState.Placed;
+            gridInteraction.ApplyPlacement(CurrentPosition);
+            _colorController?.SetState(PlaceableObjectVisualState.Default);
+            OnPlaced?.Invoke(this);
+        }
+
         public bool TryPick()
         {
             if (State != PlaceableObjectState.Placed)
@@ -171,6 +180,9 @@ namespace PlaceableObject
         public void SetCellStateVisualizationEnabled(bool isEnabled)
         {
             _showCellStateVisuals = isEnabled;
+
+            if (_isRuntimeInitialized)
+                gridInteraction.SetCellStateVisualizationEnabled(isEnabled);
         }
 
         public void ClearNetworkPlacementSuppression()

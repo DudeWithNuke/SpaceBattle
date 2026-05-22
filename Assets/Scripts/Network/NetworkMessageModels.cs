@@ -6,7 +6,6 @@ namespace Network
     public static class NetworkMessageNames
     {
         public const string SubmitFleetPreset = "SubmitFleetPreset";
-        public const string UseAbilityRequest = "UseAbilityRequest";
         public const string EndTurnRequest = "EndTurnRequest";
         public const string MatchState = "MatchState";
         public const string PlayerAssigned = "PlayerAssigned";
@@ -32,14 +31,6 @@ namespace Network
         public string defaultAbilityId;
         public string unitAbilityId;
         public string factionAbilityId;
-    }
-
-    [Serializable]
-    public struct UseAbilityRequestDto
-    {
-        public string sourceShipId;
-        public string abilityId;
-        public Vector3Int targetCell;
     }
 
     [Serializable]

@@ -72,6 +72,7 @@ namespace Network
 
             selection?.SetInteractionEnabled(canInteract);
             selection?.SetCanPickPlacedObjects(isDeploymentPhase);
+            selection?.SetCanPickPlacedAbilities(isBattlePhase);
             fleetPanelController?.SetTurnInteractionEnabled(canInteract);
             fleetPanelController?.SetBattlePhase(isBattlePhase);
             cameraMovement?.SetBattlefieldSwitchEnabled(isBattlePhase);

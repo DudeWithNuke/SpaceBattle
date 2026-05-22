@@ -29,16 +29,19 @@ namespace Network
         {
             ResolveDependencies();
 
+            if (!matchController || matchController.CurrentPhase != MatchPhase.Battle)
+                return;
+
             if (selection && selection.CurrentPickedObject)
             {
                 Debug.LogWarning("[NetworkTurnSubmitController] Submit rejected. A picked object must be placed or cancelled first.");
                 return;
             }
 
-            if (matchController && placementController)
+            if (placementController)
                 placementController.SubmitLocalFieldSnapshot(matchController.CurrentPhase, matchController.CurrentTurnNumber);
 
-            matchController?.RequestEndTurn();
+            matchController.RequestEndTurn();
         }
 
         private void ResolveDependencies()

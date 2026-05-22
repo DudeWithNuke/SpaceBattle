@@ -98,7 +98,19 @@ namespace Network
 
         private void HandleFieldObjectState(FieldObjectPlacedEventDto evt)
         {
-            if (_objectsById.ContainsKey(evt.objectId))
+            if (string.IsNullOrWhiteSpace(evt.objectId))
+                return;
+
+            _objectsById.TryGetValue(evt.objectId, out var existingObject);
+            if (existingObject)
+            {
+                if (playerContext.IsLocalPlayer(existingObject.OwnerPlayerIndex))
+                    return;
+
+                _objectsById.Remove(evt.objectId);
+            }
+
+            if (playerContext.IsLocalPlayer(evt.objectOwnerPlayerIndex))
                 return;
 
             if (!prefabRegistry.TryGetPrefab(evt.prefabId, out var prefab))
@@ -108,7 +120,21 @@ namespace Network
             }
 
             Debug.Log($"[NetworkPlacementController] Applying field object snapshot: objectOwner=Player{evt.objectOwnerPlayerIndex}, fieldOwner=Player{evt.fieldOwnerPlayerIndex}, prefab={evt.prefabId}, cell={evt.originCell}.");
-            StartCoroutine(SpawnConfirmedObject(evt, prefab));
+            StartCoroutine(ReplaceConfirmedObject(evt, prefab, existingObject));
+        }
+
+        private IEnumerator ReplaceConfirmedObject(
+            FieldObjectPlacedEventDto evt,
+            PlaceableObject.PlaceableObject prefab,
+            PlaceableObject.PlaceableObject existingObject)
+        {
+            if (existingObject)
+            {
+                Destroy(existingObject.gameObject);
+                yield return null;
+            }
+
+            yield return SpawnConfirmedObject(evt, prefab);
         }
 
         private IEnumerator SpawnConfirmedObject(
@@ -139,8 +165,7 @@ namespace Network
 
             yield return null;
 
-            instance.TryTakeFromStorage();
-            instance.TryPlace();
+            instance.ApplyConfirmedPlacement(localCell);
         }
 
         private bool ShouldIncludeInLocalSnapshot(PlaceableObject.PlaceableObject placeableObject)

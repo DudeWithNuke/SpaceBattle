@@ -12,12 +12,10 @@ namespace Network
     {
         None = 0,
         DeploymentStarted = 1,
-        DeploymentSubmitted = 2,
         DeploymentTimerExpired = 3,
         Started = 4,
         Submitted = 5,
         TimerExpired = 6,
-        AbilityResolved = 7,
         TurnChanged = 8
     }
 }

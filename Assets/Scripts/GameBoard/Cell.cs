@@ -70,6 +70,7 @@ namespace GameBoard
                     break;
                 case CellState.Hovered:
                 case CellState.HoveredSelected:
+                    break;
                 case CellState.EmptyAttacked:
                 case CellState.ShipAttacked:
                 default:

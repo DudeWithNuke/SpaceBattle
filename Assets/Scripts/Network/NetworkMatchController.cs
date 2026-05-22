@@ -80,17 +80,6 @@ namespace Network
             SendToServer(NetworkMessageNames.SubmitFleetPreset, ToJson(preset));
         }
 
-        public void RequestUseAbility(UseAbilityRequestDto request)
-        {
-            if (IsHost())
-            {
-                HandleUseAbilityRequest(NetworkManager.ServerClientId, request);
-                return;
-            }
-
-            SendToServer(NetworkMessageNames.UseAbilityRequest, ToJson(request));
-        }
-
         public void RequestEndTurn()
         {
             var request = new EndTurnRequestDto { turnNumber = _turnNumber };
@@ -147,9 +136,6 @@ namespace Network
                 NetworkMessageNames.SubmitFleetPreset,
                 ReceiveFleetPreset);
             _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
-                NetworkMessageNames.UseAbilityRequest,
-                ReceiveUseAbilityRequest);
-            _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
                 NetworkMessageNames.EndTurnRequest,
                 ReceiveEndTurnRequest);
             _networkManager.CustomMessagingManager.RegisterNamedMessageHandler(
@@ -184,7 +170,6 @@ namespace Network
                 return;
 
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.SubmitFleetPreset);
-            _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.UseAbilityRequest);
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.EndTurnRequest);
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.MatchState);
             _networkManager.CustomMessagingManager.UnregisterNamedMessageHandler(NetworkMessageNames.PlayerAssigned);
@@ -242,15 +227,6 @@ namespace Network
 
             reader.ReadValueSafe(out string json);
             HandleFleetPreset(senderClientId, FromJson<FleetPresetDto>(json));
-        }
-
-        private void ReceiveUseAbilityRequest(ulong senderClientId, FastBufferReader reader)
-        {
-            if (!_networkManager.IsServer)
-                return;
-
-            reader.ReadValueSafe(out string json);
-            HandleUseAbilityRequest(senderClientId, FromJson<UseAbilityRequestDto>(json));
         }
 
         private void ReceiveEndTurnRequest(ulong senderClientId, FastBufferReader reader)
@@ -323,24 +299,6 @@ namespace Network
             TryStartMatch();
         }
 
-        private void HandleUseAbilityRequest(ulong clientId, UseAbilityRequestDto request)
-        {
-            if (!_matchStarted)
-            {
-                Debug.LogWarning("[NetworkMatchController] Ability request rejected. Match is not started.");
-                return;
-            }
-
-            if (!IsActivePlayer(clientId))
-            {
-                Debug.LogWarning($"[NetworkMatchController] Ability request rejected. Client {clientId} is not active player.");
-                return;
-            }
-
-            Debug.Log($"[NetworkMatchController] Ability request accepted. Ship={request.sourceShipId}, Ability={request.abilityId}, Target={request.targetCell}.");
-            BroadcastMatchState(MatchStatus.AbilityResolved);
-        }
-
         private void HandleEndTurnRequest(ulong clientId, EndTurnRequestDto request)
         {
             if (!_matchStarted)
@@ -351,7 +309,7 @@ namespace Network
 
             if (_phase == MatchPhase.Deployment)
             {
-                CompleteDeployment(MatchStatus.DeploymentSubmitted);
+                Debug.LogWarning($"[NetworkMatchController] End turn ignored. Deployment ends by timer only. Client={clientId}.");
                 return;
             }
 
@@ -369,6 +327,12 @@ namespace Network
             if (!_playersByClientId.TryGetValue(clientId, out var player))
             {
                 Debug.LogWarning($"[NetworkMatchController] Field snapshot ignored. Unknown client {clientId}.");
+                return;
+            }
+
+            if (_phase == MatchPhase.Battle && player.PlayerIndex != _activePlayerIndex)
+            {
+                Debug.LogWarning($"[NetworkMatchController] Field snapshot ignored. Player{player.PlayerIndex} is not active.");
                 return;
             }
 

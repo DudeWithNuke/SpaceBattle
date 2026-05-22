@@ -3,7 +3,6 @@ using System;
 using PlayerCamera.Movement;
 using PlaceableObjectManipulation;
 using Reflex.Attributes;
-using ScriptableObjects;
 using UnityEngine;
 
 namespace PlayerCamera

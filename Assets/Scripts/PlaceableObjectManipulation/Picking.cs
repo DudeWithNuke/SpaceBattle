@@ -1,4 +1,5 @@
-﻿using PlaceableObject;
+﻿using System;
+using PlaceableObject;
 using UnityEngine;
 
 namespace PlaceableObjectManipulation.Interaction
@@ -7,7 +8,7 @@ namespace PlaceableObjectManipulation.Interaction
     {
         private readonly RaycastHit[] _raycastResults = new RaycastHit[16];
 
-        public bool TryPickClosest(Ray ray)
+        public bool TryPickClosest(Ray ray, Func<PlaceableObject.PlaceableObject, bool> canPick)
         {
             var hitCount = Physics.RaycastNonAlloc(ray, _raycastResults, Mathf.Infinity);
             if (hitCount == 0)
@@ -24,6 +25,8 @@ namespace PlaceableObjectManipulation.Interaction
                 if (!hit.collider.TryGetComponent(out PlaceableObject.PlaceableObject placeableObject))
                     continue;
                 if (placeableObject.State != PlaceableObjectState.Placed)
+                    continue;
+                if (canPick != null && !canPick(placeableObject))
                     continue;
 
                 closestDistance = hit.distance;

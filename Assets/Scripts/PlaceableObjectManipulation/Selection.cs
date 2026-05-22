@@ -1,5 +1,6 @@
 using System;
 using GameBoard;
+using PlaceableObject.Abilities;
 using PlaceableObjectManipulation.Interaction;
 using PlayerCamera;
 using Reflex.Attributes;
@@ -28,7 +29,9 @@ namespace PlaceableObjectManipulation
         public PlaceableObject.PlaceableObject CurrentPickedObject { get; private set; }
         private Picking _picker;
         private bool _isInteractionEnabled = true;
+        private bool _isPlacementEnabled = true;
         private bool _canPickPlacedObjects = true;
+        private bool _canPickPlacedAbilities;
         private bool _listSwitchValueBeforeEnemyField;
         private bool _isListSwitchLockedByEnemyField;
 
@@ -123,6 +126,8 @@ namespace PlaceableObjectManipulation
         {
             if (!_isInteractionEnabled)
                 return false;
+            if (!_isPlacementEnabled)
+                return false;
             if (!CurrentPickedObject)
                 return false;
             if (_cursorPlane.IsTransitioning)
@@ -141,10 +146,10 @@ namespace PlaceableObjectManipulation
         {
             if (!_isInteractionEnabled)
                 return false;
-            if (!_canPickPlacedObjects)
+            if (!_canPickPlacedObjects && !_canPickPlacedAbilities)
                 return false;
 
-            return !CurrentPickedObject && _picker.TryPickClosest(ray);
+            return !CurrentPickedObject && _picker.TryPickClosest(ray, CanPickPlacedObject);
         }
 
         public bool DestroyCurrentPickedObject()
@@ -175,9 +180,25 @@ namespace PlaceableObjectManipulation
             _isInteractionEnabled = isEnabled;
         }
 
+        public void SetPlacementEnabled(bool isEnabled)
+        {
+            _isPlacementEnabled = isEnabled;
+        }
+
         public void SetCanPickPlacedObjects(bool canPickPlacedObjects)
         {
             _canPickPlacedObjects = canPickPlacedObjects;
+        }
+
+        public void SetCanPickPlacedAbilities(bool canPickPlacedAbilities)
+        {
+            _canPickPlacedAbilities = canPickPlacedAbilities;
+        }
+
+        private bool CanPickPlacedObject(PlaceableObject.PlaceableObject placeableObject)
+        {
+            return _canPickPlacedObjects ||
+                   (_canPickPlacedAbilities && placeableObject is Ability);
         }
     }
 }

@@ -33,6 +33,17 @@ namespace PlaceableObject
             _hasHoverPosition = false;
         }
 
+        public void SetCellStateVisualizationEnabled(bool isEnabled)
+        {
+            if (_showCellStateVisuals == isEnabled)
+                return;
+
+            if (!isEnabled)
+                ClearHover();
+
+            _showCellStateVisuals = isEnabled;
+        }
+
         public bool CanPlace(Vector3Int position)
         {
             if (!IsWithinGridBounds(position))

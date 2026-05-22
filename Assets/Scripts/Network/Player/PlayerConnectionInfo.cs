@@ -1,4 +1,4 @@
-namespace Network
+namespace Network.Player
 {
     public sealed class PlayerConnectionInfo
     {

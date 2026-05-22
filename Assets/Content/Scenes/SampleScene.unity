@@ -2265,6 +2265,7 @@ Transform:
   - {fileID: 445403121}
   - {fileID: 330585546}
   - {fileID: 1249091663}
+  - {fileID: 1882321320}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &510327799
@@ -2279,17 +2280,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14b09f3db048e864b8e0ca66191ec4e6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameInstaller
-  createNetworkBootstrapOnAwake: 1
   cellGrid: {fileID: 1629808314}
   cursorPlane: {fileID: 1980345878}
   selection: {fileID: 445403125}
   moving: {fileID: 445403124}
   spawning: {fileID: 445403122}
+  lifecycleTracker: {fileID: 445403126}
+  fleetPanelController: {fileID: 445403123}
   shipRoster: {fileID: 2011924763}
   cameraMovement: {fileID: 330585549}
   cameraInputController: {fileID: 1249091665}
   battlefieldInputController: {fileID: 1249091664}
   cursorPlaneInputController: {fileID: 1249091662}
+  networkBootstrap: {fileID: 1882321321}
+  networkRuntime: {fileID: 1882321319}
 --- !u!114 &510327800
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6219,6 +6223,69 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1876532050}
   m_CullTransparentMesh: 1
+--- !u!1 &1882321318
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1882321320}
+  - component: {fileID: 1882321319}
+  - component: {fileID: 1882321321}
+  m_Layer: 0
+  m_Name: Network
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1882321319
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1882321318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d84f51b889a24444283880b5eaa39047, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Network.NetworkRuntime
+  rotateOpponentFieldCoordinates: 0
+  rotateOpponentObjects: 0
+  debugSubmitKey: 13
+--- !u!4 &1882321320
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1882321318}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 510327797}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1882321321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1882321318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ababfea0e9bd3bb42af6c8c350b093c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Network.NetworkBootstrap
+  defaultAddress: 127.0.0.1
+  port: 7777
+  autoConnectOnStart: 1
 --- !u!1 &1884885004
 GameObject:
   m_ObjectHideFlags: 0
@@ -6554,13 +6621,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6872b9158bcec94a92ecc6a1b9f315e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlaceableObject.ShipRoster
-  playerShips:
+  player1Ships:
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
-  enemyShips:
+  player2Ships:
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}
   - {fileID: 1241079114175220487, guid: b435a5ed50ada7040997e4f856b9d3dd, type: 3}

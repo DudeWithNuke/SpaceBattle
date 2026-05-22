@@ -1,7 +1,9 @@
 using System.Threading;
+using Reflex.Attributes;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
+using Utils;
 
 namespace Network
 {
@@ -14,6 +16,8 @@ namespace Network
         private NetworkManager _networkManager;
         private Mutex _hostRoleMutex;
         private bool _ownsHostRole;
+
+        [Inject] private NetworkRuntime _networkRuntime;
 
         private void Awake()
         {
@@ -67,7 +71,7 @@ namespace Network
             if (started)
                 InitializeMatchController();
 
-            Debug.Log(started
+            Log.Info(started
                 ? "[NetworkBootstrap] Host started."
                 : "[NetworkBootstrap] Failed to start host.");
             return started;
@@ -85,7 +89,7 @@ namespace Network
             if (started)
                 InitializeMatchController();
 
-            Debug.Log(started
+            Log.Info(started
                 ? $"[NetworkBootstrap] Client connecting to {address}:{port}."
                 : "[NetworkBootstrap] Failed to start client.");
             return started;
@@ -97,21 +101,21 @@ namespace Network
                 return;
 
             _networkManager.Shutdown();
-            Debug.Log("[NetworkBootstrap] Disconnected.");
+            Log.Info("[NetworkBootstrap] Disconnected.");
         }
 
         private void AutoConnectLocal()
         {
             if (TryAcquireHostRole())
             {
-                Debug.Log("[NetworkBootstrap] Auto-connect selected Host mode.");
+                Log.Info("[NetworkBootstrap] Auto-connect selected Host mode.");
                 if (StartHost())
                     return;
 
                 ReleaseHostRole();
             }
 
-            Debug.Log("[NetworkBootstrap] Auto-connect selected Client mode.");
+            Log.Info("[NetworkBootstrap] Auto-connect selected Client mode.");
             StartClient(defaultAddress);
         }
 
@@ -162,7 +166,7 @@ namespace Network
             var transport = _networkManager.GetComponent<UnityTransport>();
             if (!transport)
             {
-                Debug.LogError("[NetworkBootstrap] UnityTransport is missing.");
+                Log.Error("[NetworkBootstrap] UnityTransport is missing.");
                 return false;
             }
 
@@ -172,15 +176,14 @@ namespace Network
 
         private void InitializeMatchController()
         {
-            var matchController = _networkManager.GetComponent<NetworkMatchController>();
-            matchController?.InitializeAfterNetworkStart();
+            _networkRuntime.InitializeAfterNetworkStart();
         }
 
         private NetworkManager EnsureNetworkManager()
         {
             if (NetworkManager.Singleton)
             {
-                EnsureMatchController(NetworkManager.Singleton.gameObject);
+                ConfigureNetworkRuntime(NetworkManager.Singleton);
                 return NetworkManager.Singleton;
             }
 
@@ -194,40 +197,24 @@ namespace Network
                 ConnectionApproval = false
             };
 
-            EnsureMatchController(networkObject);
+            ConfigureNetworkRuntime(manager);
             DontDestroyOnLoad(networkObject);
             return manager;
         }
 
-        private static void EnsureMatchController(GameObject networkObject)
+        private void ConfigureNetworkRuntime(NetworkManager networkManager)
         {
-            if (!networkObject.GetComponent<NetworkPlayerContext>())
-                networkObject.AddComponent<NetworkPlayerContext>();
-
-            if (!networkObject.GetComponent<NetworkPrefabRegistry>())
-                networkObject.AddComponent<NetworkPrefabRegistry>();
-
-            if (!networkObject.GetComponent<NetworkMatchController>())
-                networkObject.AddComponent<NetworkMatchController>();
-
-            if (!networkObject.GetComponent<NetworkPlacementController>())
-                networkObject.AddComponent<NetworkPlacementController>();
-
-            if (!networkObject.GetComponent<NetworkTurnInputGate>())
-                networkObject.AddComponent<NetworkTurnInputGate>();
-
-            if (!networkObject.GetComponent<NetworkTurnSubmitController>())
-                networkObject.AddComponent<NetworkTurnSubmitController>();
+            _networkRuntime.Configure(networkManager);
         }
 
         private static void HandleClientConnected(ulong clientId)
         {
-            Debug.Log($"[NetworkBootstrap] Client connected: {clientId}.");
+            Log.Info($"[NetworkBootstrap] Client connected: {clientId}.");
         }
 
         private static void HandleClientDisconnected(ulong clientId)
         {
-            Debug.Log($"[NetworkBootstrap] Client disconnected: {clientId}.");
+            Log.Info($"[NetworkBootstrap] Client disconnected: {clientId}.");
         }
     }
 }

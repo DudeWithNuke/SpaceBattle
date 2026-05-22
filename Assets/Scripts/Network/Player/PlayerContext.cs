@@ -1,9 +1,10 @@
 using PlaceableObject;
 using UnityEngine;
+using Utils;
 
-namespace Network
+namespace Network.Player
 {
-    public sealed class NetworkPlayerContext : MonoBehaviour
+    public sealed class PlayerContext
     {
         public event System.Action<int> OnLocalPlayerAssigned;
 
@@ -16,7 +17,7 @@ namespace Network
                 return;
 
             LocalPlayerIndex = playerIndex;
-            Debug.Log($"[NetworkPlayerContext] Local player assigned: Player{playerIndex}.");
+            Log.Info($"[NetworkPlayerContext] Local player assigned: Player{playerIndex}.");
             OnLocalPlayerAssigned?.Invoke(playerIndex);
         }
 
@@ -25,7 +26,7 @@ namespace Network
             return HasAssignedPlayer && ownerPlayerIndex == LocalPlayerIndex;
         }
 
-        public PlaceableObjectDeploymentSide GetLocalSide(int ownerPlayerIndex)
+        private PlaceableObjectDeploymentSide GetLocalSide(int ownerPlayerIndex)
         {
             return IsLocalPlayer(ownerPlayerIndex)
                 ? PlaceableObjectDeploymentSide.OwnField

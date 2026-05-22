@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Network;
+using Network.Player;
 using PlaceableObject;
 using PlaceableObject.Ships;
 using PlayerCamera;
@@ -26,7 +27,7 @@ namespace PlaceableObjectManipulation
         [SerializeField] private AbilityPlacementController abilityPlacementController;
         [SerializeField] private Canvas buttonCanvas;
 
-        private NetworkPlayerContext _playerContext;
+        private PlayerContext _playerContext;
         private readonly List<UnitCardController> _shipButtons = new();
         private readonly Dictionary<PlaceableObject.PlaceableObject, UnitCardController> _objectToButton = new();
         private readonly List<ButtonBinding> _buttonBindings = new();
@@ -83,7 +84,7 @@ namespace PlaceableObjectManipulation
                 return;
 
             ResolvePlayerContext();
-            if (!_playerContext || !_playerContext.HasAssignedPlayer)
+            if (_playerContext == null || !_playerContext.HasAssignedPlayer)
                 return;
 
             _isWaitingForPlayerAssignment = false;
@@ -131,12 +132,17 @@ namespace PlaceableObjectManipulation
 
         private void OnDestroy()
         {
-            _cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
-            lifecycleTracker.OnPicked -= HandleInstanceStateChanged;
-            lifecycleTracker.OnPlaced -= HandleInstanceStateChanged;
-            lifecycleTracker.OnDestroyed -= HandleInstanceDestroyed;
-            abilityPlacementController.OnAbilitySpawned -= HandleAbilitySpawned;
-            if (_playerContext)
+            if (_cameraMovement != null)
+                _cameraMovement.OnBattlefieldSideChanged -= HandleBattlefieldSideChanged;
+            if (lifecycleTracker)
+            {
+                lifecycleTracker.OnPicked -= HandleInstanceStateChanged;
+                lifecycleTracker.OnPlaced -= HandleInstanceStateChanged;
+                lifecycleTracker.OnDestroyed -= HandleInstanceDestroyed;
+            }
+            if (abilityPlacementController)
+                abilityPlacementController.OnAbilitySpawned -= HandleAbilitySpawned;
+            if (_playerContext != null)
                 _playerContext.OnLocalPlayerAssigned -= HandleLocalPlayerAssigned;
 
             foreach (var shipButton in _shipButtons)
@@ -154,7 +160,7 @@ namespace PlaceableObjectManipulation
 
         private void CreateButtons()
         {
-            if (!_playerContext || !_playerContext.HasAssignedPlayer)
+            if (_playerContext == null || !_playerContext.HasAssignedPlayer)
             {
                 _isWaitingForPlayerAssignment = true;
                 Debug.Log("[FleetPanelController] Ship buttons creation deferred. Local player is not assigned yet.");
@@ -259,11 +265,11 @@ namespace PlaceableObjectManipulation
 
         private void ResolvePlayerContext()
         {
-            var playerContext = FindFirstObjectByType<NetworkPlayerContext>();
-            if (!playerContext || playerContext == _playerContext)
+            var playerContext = ContextProvider.PlayerContext;
+            if (playerContext == _playerContext)
                 return;
 
-            if (_playerContext)
+            if (_playerContext != null)
                 _playerContext.OnLocalPlayerAssigned -= HandleLocalPlayerAssigned;
 
             _playerContext = playerContext;

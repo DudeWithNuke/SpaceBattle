@@ -1,55 +1,32 @@
-using System;
 using System.Collections.Generic;
 using PlaceableObject.Abilities;
 using PlaceableObject.Ships;
 using UI.FleetPanel;
-using UnityEngine;
 
-namespace Network
+namespace Network.Placement
 {
-    public sealed class NetworkPrefabRegistry : MonoBehaviour
+    public sealed class PrefabRegistry
     {
-        [SerializeField] private ShipRoster shipRoster;
-        [SerializeField] private List<Entry> additionalPrefabs = new();
-
         private readonly Dictionary<string, PlaceableObject.PlaceableObject> _prefabsById = new();
         private readonly Dictionary<PlaceableObject.PlaceableObject, string> _idsByPrefab = new();
         private bool _isInitialized;
 
-        [Serializable]
-        private struct Entry
-        {
-            public string id;
-            public PlaceableObject.PlaceableObject prefab;
-        }
-
-        private void Awake()
-        {
-            Initialize();
-        }
-
-        public void Initialize()
+        public void Initialize(ShipRoster shipRoster)
         {
             if (_isInitialized)
                 return;
 
-            if (!shipRoster)
-                shipRoster = FindFirstObjectByType<ShipRoster>();
-
-            RegisterAdditionalPrefabs();
-            RegisterRosterPrefabs();
+            RegisterRosterPrefabs(shipRoster);
             _isInitialized = true;
         }
 
         public bool TryGetPrefab(string prefabId, out PlaceableObject.PlaceableObject prefab)
         {
-            Initialize();
             return _prefabsById.TryGetValue(prefabId, out prefab);
         }
 
         public string GetPrefabId(PlaceableObject.PlaceableObject prefab)
         {
-            Initialize();
             if (!prefab)
                 return string.Empty;
 
@@ -61,21 +38,12 @@ namespace Network
             return id;
         }
 
-        public string GetPrefabIdForInstance(PlaceableObject.PlaceableObject instance)
+        public static string GetPrefabIdForInstance(PlaceableObject.PlaceableObject instance)
         {
-            if (!instance)
-                return string.Empty;
-
-            return $"{instance.GetType().Name}:{NormalizeInstanceName(instance.name)}";
+            return !instance ? string.Empty : $"{instance.GetType().Name}:{NormalizeInstanceName(instance.name)}";
         }
 
-        private void RegisterAdditionalPrefabs()
-        {
-            foreach (var entry in additionalPrefabs)
-                Register(entry.id, entry.prefab);
-        }
-
-        private void RegisterRosterPrefabs()
+        private void RegisterRosterPrefabs(ShipRoster shipRoster)
         {
             if (!shipRoster)
                 return;
@@ -110,11 +78,8 @@ namespace Network
             if (string.IsNullOrWhiteSpace(id) || !prefab)
                 return;
 
-            if (!_prefabsById.ContainsKey(id))
-                _prefabsById.Add(id, prefab);
-
-            if (!_idsByPrefab.ContainsKey(prefab))
-                _idsByPrefab.Add(prefab, id);
+            _prefabsById.TryAdd(id, prefab);
+            _idsByPrefab.TryAdd(prefab, id);
         }
 
         private static string CreatePrefabId(PlaceableObject.PlaceableObject prefab)
